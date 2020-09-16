@@ -18,7 +18,7 @@ Pacman agents (in searchAgents.py).
 """
 
 import util
-from util import Stack, Queue
+from util import Stack, Queue, PriorityQueue, PriorityQueueWithFunction
 from game import Directions
 
 
@@ -75,6 +75,24 @@ def tinyMazeSearch(problem):
     return [s, s, w, s, w, w, s, w]
 
 
+def searchTemplate(problem, containerClass):
+    container = containerClass()
+    visited = set()
+    container.push((problem.getStartState(), [], 0))
+
+    while not container.isEmpty():
+        (state, path, _) = container.pop()
+        if problem.isGoalState(state):
+            return path
+        elif state not in visited:
+            for succ in problem.getSuccessors(state):
+                if succ not in visited:
+                    container.push((succ[0], path + [succ[1]], succ[2]))
+            visited.add(state)
+
+    raise Exception("No paths found!")
+
+
 def depthFirstSearch(problem):
     """
     Search the deepest nodes in the search tree first.
@@ -90,38 +108,20 @@ def depthFirstSearch(problem):
     print("Start's successors:", problem.getSuccessors(problem.getStartState()))
     """
     "*** YOUR CODE HERE ***"
-    print("Start:", problem.getStartState())
-    print("Is the start a goal?", problem.isGoalState(problem.getStartState()))
-    print("Start's successors:", problem.getSuccessors(problem.getStartState()))
-
-    stack = Stack()
-    visited = set()
-    stack.push((problem.getStartState(), []))
-
-    while not stack.isEmpty():
-        (state, path) = stack.pop()
-
-        if problem.isGoalState(state):
-            return path
-        elif state not in visited:
-            for succ in problem.getSuccessors(state):
-                if succ not in visited:
-                    stack.push((succ[0], path + [succ[1]]))
-            visited.add(state)
-
-    raise Exception("No paths found!")
+    return searchTemplate(problem, Stack)
 
 
 def breadthFirstSearch(problem):
     """Search the shallowest nodes in the search tree first."""
     "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    return searchTemplate(problem, Queue)
 
 
 def uniformCostSearch(problem):
     """Search the node of least total cost first."""
     "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    def myPriorityQueue(): return PriorityQueueWithFunction(lambda x: x[2])
+    return searchTemplate(problem, myPriorityQueue)
 
 
 def nullHeuristic(state, problem=None):
@@ -135,7 +135,9 @@ def nullHeuristic(state, problem=None):
 def aStarSearch(problem, heuristic=nullHeuristic):
     """Search the node that has the lowest combined cost and heuristic first."""
     "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    def myPriorityQueue(): return PriorityQueueWithFunction(
+        lambda x: problem.getCostOfActions(x[1]) + heuristic(x[0], problem))
+    return searchTemplate(problem, myPriorityQueue)
 
 
 # Abbreviations
