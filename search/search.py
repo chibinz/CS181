@@ -78,16 +78,16 @@ def tinyMazeSearch(problem):
 def searchTemplate(problem, containerClass):
     container = containerClass()
     visited = set()
-    container.push((problem.getStartState(), [], 0))
+    container.push((problem.getStartState(), []))
 
     while not container.isEmpty():
-        (state, path, _) = container.pop()
+        (state, path) = container.pop()
         if problem.isGoalState(state):
             return path
         elif state not in visited:
             for succ in problem.getSuccessors(state):
                 if succ not in visited:
-                    container.push((succ[0], path + [succ[1]], succ[2]))
+                    container.push((succ[0], path + [succ[1]]))
             visited.add(state)
 
     raise Exception("No paths found!")
@@ -120,7 +120,8 @@ def breadthFirstSearch(problem):
 def uniformCostSearch(problem):
     """Search the node of least total cost first."""
     "*** YOUR CODE HERE ***"
-    def myPriorityQueue(): return PriorityQueueWithFunction(lambda x: x[2])
+    def myPriorityQueue(): return PriorityQueueWithFunction(
+        lambda x: problem.getCostOfActions(x[1]))
     return searchTemplate(problem, myPriorityQueue)
 
 
