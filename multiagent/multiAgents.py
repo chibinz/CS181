@@ -111,6 +111,12 @@ class MultiAgentSearchAgent(Agent):
         self.evaluationFunction = util.lookup(evalFn, globals())
         self.depth = int(depth)
 
+    def isFinished(self, state, depth):
+        return state.isWin() or state.isLose() or depth == self.depth * state.getNumAgents()
+
+    def getAgent(self, state, depth):
+        return depth % state.getNumAgents()
+
 
 class MinimaxAgent(MultiAgentSearchAgent):
     """
@@ -140,16 +146,9 @@ class MinimaxAgent(MultiAgentSearchAgent):
         gameState.isLose():
         Returns whether or not the game state is a losing state
         """
-        "*** YOUR CODE HERE ***"
 
         self.recurseStates(gameState, 0)
         return self.action
-
-    def isFinished(self, state, depth):
-        return state.isWin() or state.isLose() or depth == self.depth * state.getNumAgents()
-
-    def getAgent(self, state, depth):
-        return depth % state.getNumAgents()
 
     def recurseStates(self, state, depth):
         if self.isFinished(state, depth):
@@ -167,7 +166,7 @@ class MinimaxAgent(MultiAgentSearchAgent):
                 return min(results)
 
 
-class AlphaBetaAgent(MinimaxAgent):
+class AlphaBetaAgent(MultiAgentSearchAgent):
     """
     Your minimax agent with alpha-beta pruning (question 2)
     """
@@ -231,8 +230,23 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
         All ghosts should be modeled as choosing uniformly at random from their
         legal moves.
         """
-        "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        self.recurseStates(gameState, 0)
+        return self.action
+
+    def recurseStates(self, state, depth):
+        if self.isFinished(state, depth):
+            self.action = Directions.STOP
+            return self.evaluationFunction(state)
+        else:  # Maximize or minimize depending on depth (whose turn is it)
+            agent = self.getAgent(state, depth)
+            results = [self.recurseStates(state.generateSuccessor(
+                agent, action), depth + 1) for action in state.getLegalActions(agent)]
+            if agent == 0:  # Pacman turn
+                self.action = state.getLegalActions(
+                    agent)[results.index(max(results))]
+                return max(results)
+            else:  # Ghost(s) turn
+                return sum(results) / len(results)
 
 
 def betterEvaluationFunction(currentGameState):
