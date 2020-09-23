@@ -14,9 +14,10 @@
 
 from util import manhattanDistance
 from game import Directions
-import random, util
-
 from game import Agent
+import random
+import util
+
 
 class ReflexAgent(Agent):
     """
@@ -27,7 +28,6 @@ class ReflexAgent(Agent):
     it in any way you see fit, so long as you don't touch our method
     headers.
     """
-
 
     def getAction(self, gameState):
         """
@@ -42,10 +42,13 @@ class ReflexAgent(Agent):
         legalMoves = gameState.getLegalActions()
 
         # Choose one of the best actions
-        scores = [self.evaluationFunction(gameState, action) for action in legalMoves]
+        scores = [self.evaluationFunction(
+            gameState, action) for action in legalMoves]
         bestScore = max(scores)
-        bestIndices = [index for index in range(len(scores)) if scores[index] == bestScore]
-        chosenIndex = random.choice(bestIndices) # Pick randomly among the best
+        bestIndices = [index for index in range(
+            len(scores)) if scores[index] == bestScore]
+        # Pick randomly among the best
+        chosenIndex = random.choice(bestIndices)
 
         "Add more of your code here if you want to"
 
@@ -71,9 +74,11 @@ class ReflexAgent(Agent):
         newPos = successorGameState.getPacmanPosition()
         newFood = successorGameState.getFood()
         newGhostStates = successorGameState.getGhostStates()
-        newScaredTimes = [ghostState.scaredTimer for ghostState in newGhostStates]
+        newScaredTimes = [
+            ghostState.scaredTimer for ghostState in newGhostStates]
 
         return successorGameState.getScore()
+
 
 def scoreEvaluationFunction(currentGameState):
     """
@@ -84,6 +89,7 @@ def scoreEvaluationFunction(currentGameState):
     (not reflex agents).
     """
     return currentGameState.getScore()
+
 
 class MultiAgentSearchAgent(Agent):
     """
@@ -100,10 +106,11 @@ class MultiAgentSearchAgent(Agent):
     is another abstract class.
     """
 
-    def __init__(self, evalFn = 'scoreEvaluationFunction', depth = '2'):
-        self.index = 0 # Pacman is always agent index 0
+    def __init__(self, evalFn='scoreEvaluationFunction', depth='2'):
+        self.index = 0  # Pacman is always agent index 0
         self.evaluationFunction = util.lookup(evalFn, globals())
         self.depth = int(depth)
+
 
 class MinimaxAgent(MultiAgentSearchAgent):
     """
@@ -134,9 +141,33 @@ class MinimaxAgent(MultiAgentSearchAgent):
         Returns whether or not the game state is a losing state
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
 
-class AlphaBetaAgent(MultiAgentSearchAgent):
+        self.recurseStates(gameState, 0)
+        return self.action
+
+    def isFinished(self, state, depth):
+        return state.isWin() or state.isLose() or depth == self.depth * state.getNumAgents()
+
+    def getAgent(self, state, depth):
+        return depth % state.getNumAgents()
+
+    def recurseStates(self, state, depth):
+        if self.isFinished(state, depth):
+            self.action = Directions.STOP
+            return self.evaluationFunction(state)
+        else:  # Maximize or minimize depending on depth (whose turn is it)
+            agent = self.getAgent(state, depth)
+            results = [self.recurseStates(state.generateSuccessor(
+                agent, action), depth + 1) for action in state.getLegalActions(agent)]
+            if agent == 0:  # Pacman turn
+                self.action = state.getLegalActions(
+                    agent)[results.index(max(results))]
+                return max(results)
+            else:  # Ghost(s) turn
+                return min(results)
+
+
+class AlphaBetaAgent(MinimaxAgent):
     """
     Your minimax agent with alpha-beta pruning (question 2)
     """
@@ -145,8 +176,48 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
         """
         Returns the minimax action using self.depth and self.evaluationFunction
         """
-        "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        return self.recurseStates(gameState, 0, float('-inf'), float('inf'))[1]
+
+    def recurseStates(self, state, depth, alpha, beta):
+        if self.isFinished(state, depth):
+            return self.evaluationFunction(state), Directions.STOP
+        elif self.getAgent(state, depth) == 0:
+            return self.recurseBeta(state, depth, alpha, beta)
+        else:
+            return self.recurseAlpha(state, depth, alpha, beta)
+
+    def recurseBeta(self, state, depth, alpha, beta):
+        curr = float('-inf')
+        agent = self.getAgent(state, depth)
+        action = Directions.STOP
+        for a in state.getLegalActions(agent):
+            result, _ = self.recurseStates(state.generateSuccessor(
+                agent, a), depth+1, alpha, beta)
+            if result > curr:
+                curr = result
+                action = a
+            if curr > beta:  # Exit early, i.e. prune
+                return (curr, action)
+            if curr > alpha:
+                alpha = curr
+        return curr, action
+
+    def recurseAlpha(self, state, depth, alpha, beta):
+        curr = float('inf')
+        agent = self.getAgent(state, depth)
+        action = Directions.STOP
+        for a in state.getLegalActions(agent):
+            succ = state.generateSuccessor(agent, a)
+            result, _ = self.recurseStates(succ, depth+1, alpha, beta)
+            if result < curr:
+                curr = result
+                action = a
+            if curr < alpha:
+                return (curr, action)
+            if curr < beta:
+                beta = curr
+        return curr, action
+
 
 class ExpectimaxAgent(MultiAgentSearchAgent):
     """
@@ -163,6 +234,7 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
         "*** YOUR CODE HERE ***"
         util.raiseNotDefined()
 
+
 def betterEvaluationFunction(currentGameState):
     """
     Your extreme ghost-hunting, pellet-nabbing, food-gobbling, unstoppable
@@ -172,6 +244,7 @@ def betterEvaluationFunction(currentGameState):
     """
     "*** YOUR CODE HERE ***"
     util.raiseNotDefined()
+
 
 # Abbreviation
 better = betterEvaluationFunction
