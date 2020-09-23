@@ -71,11 +71,6 @@ class ReflexAgent(Agent):
         """
         # Useful information you can extract from a GameState (pacman.py)
         successorGameState = currentGameState.generatePacmanSuccessor(action)
-        newPos = successorGameState.getPacmanPosition()
-        newFood = successorGameState.getFood()
-        newGhostStates = successorGameState.getGhostStates()
-        newScaredTimes = [
-            ghostState.scaredTimer for ghostState in newGhostStates]
 
         return successorGameState.getScore()
 
@@ -254,8 +249,8 @@ def betterEvaluationFunction(currentGameState, init=True):
     Your extreme ghost-hunting, pellet-nabbing, food-gobbling, unstoppable
     evaluation function (question 4).
 
-    - Use randint to break ties when min(foodDists) is same at different state
-    - `time` - 2 > 0 When ghosts are scared and remaining time > 2 second,
+    - Use randint to break ties when min(foodDists) is same at different states.
+    - `time` - 2 > 0 when ghosts are going to be scared for > 2 second.
     - Otherwise it may be sensible to run away from ghost
     """
     original = currentGameState.getScore()
