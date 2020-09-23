@@ -249,15 +249,35 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
                 return sum(results) / len(results)
 
 
-def betterEvaluationFunction(currentGameState):
+def betterEvaluationFunction(currentGameState, init=True):
     """
     Your extreme ghost-hunting, pellet-nabbing, food-gobbling, unstoppable
     evaluation function (question 4).
 
-    DESCRIPTION: <write something here so we know what you did>
+    - Use randint to break ties when min(foodDists) is same at different state
+    - `time` - 2 > 0 When ghosts are scared and remaining time > 2 second,
+    - Otherwise it may be sensible to run away from ghost
     """
-    "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    original = currentGameState.getScore()
+    pos = currentGameState.getPacmanPosition()
+    foods = currentGameState.getFood()
+    ghostStates = currentGameState.getGhostStates()
+
+    ghostScaredTimesAndDists = [
+        (g.scaredTimer, manhattanDistance(pos, g.getPosition())) for g in ghostStates]
+    foodDists = [manhattanDistance(pos, food) for food in foods.asList()]
+
+    def calcGhostScore(tup):
+        time, dist = tup
+        return 2 * (time - 2) / (dist / 2 + 0.0001)
+
+    ghostScores = map(calcGhostScore, ghostScaredTimesAndDists)
+    foodScore = -min(foodDists, default=0)
+    ghostScore = sum(ghostScores)
+
+    score = original + foodScore + ghostScore + random.randint(0, 1)
+
+    return score
 
 
 # Abbreviation
