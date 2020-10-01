@@ -79,7 +79,7 @@ def sentence1():
     A = logic.Expr('A')
     B = logic.Expr('B')
     C = logic.Expr('C')
-    return logic.conjoin([(A | B), (~A % (~B | C)), (~A | ~B | C)])
+    return logic.conjoin([(A | B), (~A % (~B | C)), logic.disjoin([~A, ~B, C])])
 
 
 def sentence2():
@@ -152,7 +152,12 @@ def atMostOne(literals):
     CNF (conjunctive normal form) that represents the logic that at most one of
     the expressions in the list is true.
     """
-    return logic.conjoin(literals)
+    conj = []
+    for i in range(len(literals)):
+        for j in range(len(literals)):
+            if i < j:
+                conj.append(logic.disjoin([~literals[i], ~literals[j]]))
+    return logic.conjoin(conj)
 
 
 def exactlyOne(literals):
@@ -161,7 +166,6 @@ def exactlyOne(literals):
     CNF (conjunctive normal form)that represents the logic that exactly one of
     the expressions in the list is true.
     """
-    "*** YOUR CODE HERE ***"
     return atLeastOne(literals) & atMostOne(literals)
 
 
@@ -177,8 +181,9 @@ def extractActionSequence(model, actions):
     >>> print plan
     ['West', 'South', 'North']
     """
-    "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    actionAndTime = [(logic.PropSymbolExpr.parseExpr(key)[0], logic.PropSymbolExpr.parseExpr(key)[1]) for key in model if model[key] and logic.PropSymbolExpr.parseExpr(key)[0] in actions]
+    actionAndTime.sort(key = lambda x: int(x[1]))
+    return map(lambda x: x[0], actionAndTime)
 
 
 def pacmanSuccessorStateAxioms(x, y, t, walls_grid):
