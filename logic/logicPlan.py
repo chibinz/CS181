@@ -22,6 +22,7 @@ import sys
 import logic
 import game
 
+from logic import *
 
 pacman_str = 'P'
 ghost_pos_str = 'G'
@@ -70,36 +71,36 @@ def tinyMazePlan(problem):
 
 
 def sentence1():
-    """Returns a logic.Expr instance that encodes that the following expressions are all true.
+    """Returns a Expr instance that encodes that the following expressions are all true.
 
     A or B
     (not A) if and only if ((not B) or C)
     (not A) or (not B) or C
     """
-    A = logic.Expr('A')
-    B = logic.Expr('B')
-    C = logic.Expr('C')
-    return logic.conjoin([(A | B), (~A % (~B | C)), logic.disjoin([~A, ~B, C])])
+    A = Expr('A')
+    B = Expr('B')
+    C = Expr('C')
+    return conjoin([(A | B), (~A % (~B | C)), disjoin([~A, ~B, C])])
 
 
 def sentence2():
-    """Returns a logic.Expr instance that encodes that the following expressions are all true.
+    """Returns a Expr instance that encodes that the following expressions are all true.
 
     C if and only if (B or D)
     A implies ((not B) and (not D))
     (not (B and (not C))) implies A
     (not D) implies C
     """
-    A = logic.Expr('A')
-    B = logic.Expr('B')
-    C = logic.Expr('C')
-    D = logic.Expr('D')
-    return logic.conjoin([(C % (B | D)), A >> (~B & ~D), ~(B & ~C) >> A, ~D >> C])
+    A = Expr('A')
+    B = Expr('B')
+    C = Expr('C')
+    D = Expr('D')
+    return conjoin([(C % (B | D)), A >> (~B & ~D), ~(B & ~C) >> A, ~D >> C])
 
 
 def sentence3():
     """Using the symbols WumpusAlive[1], WumpusAlive[0], WumpusBorn[0], and WumpusKilled[0],
-    created using the logic.PropSymbolExpr constructor, return a logic.PropSymbolExpr
+    created using the PropSymbolExpr constructor, return a PropSymbolExpr
     instance that encodes the following English sentences (in this order):
 
     The Wumpus is alive at time 1 if and only if the Wumpus was alive at time 0 and it was
@@ -109,46 +110,46 @@ def sentence3():
 
     The Wumpus is born at time 0.
     """
-    Alive1 = logic.PropSymbolExpr('WumpusAlive', 1)
-    Alive0 = logic.PropSymbolExpr('WumpusAlive', 0)
-    Born0 = logic.PropSymbolExpr('WumpusBorn', 0)
-    Killed0 = logic.PropSymbolExpr('WumpusKilled', 0)
+    Alive1 = PropSymbolExpr('WumpusAlive', 1)
+    Alive0 = PropSymbolExpr('WumpusAlive', 0)
+    Born0 = PropSymbolExpr('WumpusBorn', 0)
+    Killed0 = PropSymbolExpr('WumpusKilled', 0)
 
-    return logic.conjoin([Alive1 % ((Alive0 & ~Killed0) | (~Alive0 & Born0)), ~(Alive0 & Born0), Born0])
+    return conjoin([Alive1 % ((Alive0 & ~Killed0) | (~Alive0 & Born0)), ~(Alive0 & Born0), Born0])
 
 
 def findModel(sentence):
-    """Given a propositional logic sentence (i.e. a logic.Expr instance), returns a satisfying
+    """Given a propositional logic sentence (i.e. a Expr instance), returns a satisfying
     model if one exists. Otherwise, returns False.
     """
-    return logic.pycoSAT(logic.to_cnf(sentence))
+    return pycoSAT(to_cnf(sentence))
 
 
 def atLeastOne(literals):
     """
-    Given a list of logic.Expr literals (i.e. in the form A or ~A), return a single
-    logic.Expr instance in CNF (conjunctive normal form) that represents the logic
+    Given a list of Expr literals (i.e. in the form A or ~A), return a single
+    Expr instance in CNF (conjunctive normal form) that represents the logic
     that at least one of the literals in the list is true.
-    >>> A = logic.PropSymbolExpr('A');
-    >>> B = logic.PropSymbolExpr('B');
+    >>> A = PropSymbolExpr('A');
+    >>> B = PropSymbolExpr('B');
     >>> symbols = [A, B]
     >>> atleast1 = atLeastOne(symbols)
     >>> model1 = {A:False, B:False}
-    >>> print logic.pl_true(atleast1,model1)
+    >>> print pl_true(atleast1,model1)
     False
     >>> model2 = {A:False, B:True}
-    >>> print logic.pl_true(atleast1,model2)
+    >>> print pl_true(atleast1,model2)
     True
     >>> model3 = {A:True, B:True}
-    >>> print logic.pl_true(atleast1,model2)
+    >>> print pl_true(atleast1,model2)
     True
     """
-    return logic.disjoin(literals)
+    return disjoin(literals)
 
 
 def atMostOne(literals):
     """
-    Given a list of logic.Expr literals, return a single logic.Expr instance in
+    Given a list of Expr literals, return a single Expr instance in
     CNF (conjunctive normal form) that represents the logic that at most one of
     the expressions in the list is true.
     """
@@ -156,13 +157,13 @@ def atMostOne(literals):
     for i in range(len(literals)):
         for j in range(len(literals)):
             if i < j:
-                conj.append(logic.disjoin([~literals[i], ~literals[j]]))
-    return logic.conjoin(conj)
+                conj.append(disjoin([~literals[i], ~literals[j]]))
+    return conjoin(conj)
 
 
 def exactlyOne(literals):
     """
-    Given a list of logic.Expr literals, return a single logic.Expr instance in
+    Given a list of Expr literals, return a single Expr instance in
     CNF (conjunctive normal form)that represents the logic that exactly one of
     the expressions in the list is true.
     """
@@ -181,8 +182,9 @@ def extractActionSequence(model, actions):
     >>> print plan
     ['West', 'South', 'North']
     """
-    actionAndTime = [(logic.PropSymbolExpr.parseExpr(key)[0], logic.PropSymbolExpr.parseExpr(key)[1]) for key in model if model[key] and logic.PropSymbolExpr.parseExpr(key)[0] in actions]
-    actionAndTime.sort(key = lambda x: int(x[1]))
+    actionAndTime = [(PropSymbolExpr.parseExpr(key)[0], PropSymbolExpr.parseExpr(
+        key)[1]) for key in model if model[key] and PropSymbolExpr.parseExpr(key)[0] in actions]
+    actionAndTime.sort(key=lambda x: int(x[1]))
     return map(lambda x: x[0], actionAndTime)
 
 
@@ -192,8 +194,11 @@ def pacmanSuccessorStateAxioms(x, y, t, walls_grid):
     grid representing the wall locations).
     Current <==> (previous position at time t-1) & (took action to move to x, y)
     """
-    "*** YOUR CODE HERE ***"
-    return logic.Expr('A')  # Replace this with your expression
+    PosAndAction = [(x + 1, y, 'West'), (x - 1, y, 'East'),
+                    (x, y + 1, 'South'), (x, y - 1, 'North')]
+    valid = [PropSymbolExpr(pacman_str, x, y, t - 1) & PropSymbolExpr(action, t - 1)
+             for x, y, action in PosAndAction if not walls_grid[x][y]]
+    return to_cnf(PropSymbolExpr(pacman_str, x, y, t) % disjoin(valid))
 
 
 def positionLogicPlan(problem):
