@@ -164,7 +164,7 @@ def eliminateWithCallTracking(callTrackingList=None):
                              "eliminationVariable:" + str(eliminationVariable) + "\n" +
                              "unconditionedVariables: " + str(factor.unconditionedVariables()))
 
-        unconditioned = factor.unconditionedVariables()
+        unconditioned = factor.unconditionedVariables().copy()
         unconditioned.remove(eliminationVariable)
         result = Factor(unconditioned, factor.conditionedVariables(),
                         factor.variableDomainsDict())
@@ -231,5 +231,13 @@ def normalize(factor):
                              "so that total probability will sum to 1\n" +
                              str(factor))
 
-    "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    unconditioned = set(
+        [var for var, domain in factor.variableDomainsDict().items() if len(domain) > 1])
+    conditioned = set(
+        [var for var, domain in factor.variableDomainsDict().items() if len(domain) == 1 and var in factor.unconditionedVariables() or var in factor.conditionedVariables()])
+    result = Factor(unconditioned, conditioned, factor.variableDomainsDict())
+    s = sum([factor.getProbability(assign)
+             for assign in factor.getAllPossibleAssignmentDicts()])
+    for assign in result.getAllPossibleAssignmentDicts():
+        result.setProbability(assign, factor.getProbability(assign)/s)
+    return result
