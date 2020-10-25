@@ -113,7 +113,7 @@ def joinFactors(factors):
                     factors[0].variableDomainsDict())
 
     for assign in result.getAllPossibleAssignmentDicts():
-        prob = reduce(lambda x, y: x * y, # cumulative product
+        prob = reduce(lambda x, y: x * y,  # cumulative product
                       [f.getProbability(assign) for f in factors])
         Factor.setProbability(result, assign, prob)
     return result
@@ -164,8 +164,19 @@ def eliminateWithCallTracking(callTrackingList=None):
                              "eliminationVariable:" + str(eliminationVariable) + "\n" +
                              "unconditionedVariables: " + str(factor.unconditionedVariables()))
 
-        "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        unconditioned = factor.unconditionedVariables()
+        unconditioned.remove(eliminationVariable)
+        result = Factor(unconditioned, factor.conditionedVariables(),
+                        factor.variableDomainsDict())
+
+        for v in result.getAllPossibleAssignmentDicts():
+            copy = v.copy()
+            s = 0
+            for e in factor.variableDomainsDict()[eliminationVariable]:
+                copy[eliminationVariable] = e
+                s += factor.getProbability(copy)
+            result.setProbability(v, s)
+        return result
 
     return eliminate
 
