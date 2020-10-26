@@ -115,7 +115,7 @@ def joinFactors(factors):
     for assign in result.getAllPossibleAssignmentDicts():
         prob = reduce(lambda x, y: x * y,  # cumulative product
                       [f.getProbability(assign) for f in factors])
-        Factor.setProbability(result, assign, prob)
+        result.setProbability(assign, prob)
     return result
 
 
@@ -164,7 +164,7 @@ def eliminateWithCallTracking(callTrackingList=None):
                              "eliminationVariable:" + str(eliminationVariable) + "\n" +
                              "unconditionedVariables: " + str(factor.unconditionedVariables()))
 
-        unconditioned = factor.unconditionedVariables().copy()
+        unconditioned = factor.unconditionedVariables()
         unconditioned.remove(eliminationVariable)
         result = Factor(unconditioned, factor.conditionedVariables(),
                         factor.variableDomainsDict())
@@ -232,7 +232,7 @@ def normalize(factor):
                              str(factor))
 
     unconditioned = set(
-        [var for var, domain in factor.variableDomainsDict().items() if len(domain) > 1])
+        [var for var, domain in factor.variableDomainsDict().items() if len(domain) > 1 if var in factor.unconditionedVariables()])
     conditioned = set(
         [var for var, domain in factor.variableDomainsDict().items() if len(domain) == 1 and var in factor.unconditionedVariables() or var in factor.conditionedVariables()])
     result = Factor(unconditioned, conditioned, factor.variableDomainsDict())

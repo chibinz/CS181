@@ -60,6 +60,7 @@ ENTER_LEFT = 0
 ENTER_RIGHT = 1
 EXPLORE = 2
 
+
 def constructBayesNet(gameState):
     """
     Question 1: Bayes net structure
@@ -94,27 +95,22 @@ def constructBayesNet(gameState):
     edges = []
     variableDomainsDict = {}
 
-    obsVars += [OBS_VAR_TEMPLATE % obsPos for housePos in gameState.getPossibleHouses() for obsPos in gameState.getHouseWalls(housePos)]
+    obsVars += [OBS_VAR_TEMPLATE % obsPos for housePos in gameState.getPossibleHouses()
+                for obsPos in gameState.getHouseWalls(housePos)]
 
-    edges += [(pos, house) for pos in [X_POS_VAR, Y_POS_VAR] for house in HOUSE_VARS]
+    edges += [(pos, house) for pos in [X_POS_VAR, Y_POS_VAR]
+              for house in HOUSE_VARS]
     edges += [(house, obs) for house in HOUSE_VARS for obs in obsVars]
 
-    variableDomainsDict.update({x : val for x in X_POS_VALS for val in X_POS_VALS})
-    variableDomainsDict.update({y : val for y in Y_POS_VALS for val in Y_POS_VALS})
-    variableDomainsDict.update({house : val for house in HOUSE_VARS for val in HOUSE_VALS})
-    variableDomainsDict.update({obs : val for obs in obsVars for val in OBS_VALS})
-
-    print(obsVars)
-    print(edges)
-    print(variableDomainsDict)
-
-
-    # "*** YOUR CODE HERE ***"
-    # util.raiseNotDefined()
+    variableDomainsDict.update({X_POS_VAR: X_POS_VALS, Y_POS_VAR: Y_POS_VALS})
+    variableDomainsDict.update({house: HOUSE_VALS for house in HOUSE_VARS})
+    variableDomainsDict.update({obs: OBS_VALS for obs in obsVars})
 
     variables = [X_POS_VAR, Y_POS_VAR] + HOUSE_VARS + obsVars
     net = bn.constructEmptyBayesNet(variables, edges, variableDomainsDict)
+
     return net, obsVars
+
 
 def fillCPTs(bayesNet, gameState):
     fillXCPT(bayesNet, gameState)
@@ -122,12 +118,14 @@ def fillCPTs(bayesNet, gameState):
     fillHouseCPT(bayesNet, gameState)
     fillObsCPT(bayesNet, gameState)
 
+
 def fillXCPT(bayesNet, gameState):
     from layout import PROB_FOOD_LEFT
     xFactor = bn.Factor([X_POS_VAR], [], bayesNet.variableDomainsDict())
     xFactor.setProbability({X_POS_VAR: FOOD_LEFT_VAL}, PROB_FOOD_LEFT)
     xFactor.setProbability({X_POS_VAR: GHOST_LEFT_VAL}, 1 - PROB_FOOD_LEFT)
     bayesNet.setCPT(X_POS_VAR, xFactor)
+
 
 def fillYCPT(bayesNet, gameState):
     """
@@ -138,18 +136,21 @@ def fillYCPT(bayesNet, gameState):
     You can use the PROB_* constants imported from layout rather than writing
     probabilities down by hand.
     """
-
     yFactor = bn.Factor([Y_POS_VAR], [], bayesNet.variableDomainsDict())
-    "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    yFactor.setProbability({Y_POS_VAR: BOTH_TOP_VAL}, PROB_BOTH_TOP)
+    yFactor.setProbability({Y_POS_VAR: BOTH_BOTTOM_VAL}, PROB_BOTH_BOTTOM)
+    yFactor.setProbability({Y_POS_VAR: LEFT_TOP_VAL}, PROB_ONLY_LEFT_TOP)
+    yFactor.setProbability({Y_POS_VAR: LEFT_BOTTOM_VAL}, PROB_ONLY_LEFT_BOTTOM)
     bayesNet.setCPT(Y_POS_VAR, yFactor)
 
+
 def fillHouseCPT(bayesNet, gameState):
-    foodHouseFactor = bn.Factor([FOOD_HOUSE_VAR], [X_POS_VAR, Y_POS_VAR], bayesNet.variableDomainsDict())
+    foodHouseFactor = bn.Factor(
+        [FOOD_HOUSE_VAR], [X_POS_VAR, Y_POS_VAR], bayesNet.variableDomainsDict())
     for assignment in foodHouseFactor.getAllPossibleAssignmentDicts():
         left = assignment[X_POS_VAR] == FOOD_LEFT_VAL
         top = assignment[Y_POS_VAR] == BOTH_TOP_VAL or \
-                (left and assignment[Y_POS_VAR] == LEFT_TOP_VAL)
+            (left and assignment[Y_POS_VAR] == LEFT_TOP_VAL)
 
         if top and left and assignment[FOOD_HOUSE_VAR] == TOP_LEFT_VAL or \
                 top and not left and assignment[FOOD_HOUSE_VAR] == TOP_RIGHT_VAL or \
@@ -162,11 +163,12 @@ def fillHouseCPT(bayesNet, gameState):
         foodHouseFactor.setProbability(assignment, prob)
     bayesNet.setCPT(FOOD_HOUSE_VAR, foodHouseFactor)
 
-    ghostHouseFactor = bn.Factor([GHOST_HOUSE_VAR], [X_POS_VAR, Y_POS_VAR], bayesNet.variableDomainsDict())
+    ghostHouseFactor = bn.Factor(
+        [GHOST_HOUSE_VAR], [X_POS_VAR, Y_POS_VAR], bayesNet.variableDomainsDict())
     for assignment in ghostHouseFactor.getAllPossibleAssignmentDicts():
         left = assignment[X_POS_VAR] == GHOST_LEFT_VAL
         top = assignment[Y_POS_VAR] == BOTH_TOP_VAL or \
-                (left and assignment[Y_POS_VAR] == LEFT_TOP_VAL)
+            (left and assignment[Y_POS_VAR] == LEFT_TOP_VAL)
 
         if top and left and assignment[GHOST_HOUSE_VAR] == TOP_LEFT_VAL or \
                 top and not left and assignment[GHOST_HOUSE_VAR] == TOP_RIGHT_VAL or \
@@ -178,6 +180,7 @@ def fillHouseCPT(bayesNet, gameState):
 
         ghostHouseFactor.setProbability(assignment, prob)
     bayesNet.setCPT(GHOST_HOUSE_VAR, ghostHouseFactor)
+
 
 def fillObsCPT(bayesNet, gameState):
     """
@@ -203,10 +206,31 @@ def fillObsCPT(bayesNet, gameState):
     house and ghost house are assigned to the same cell.
     """
 
-    bottomLeftPos, topLeftPos, bottomRightPos, topRightPos = gameState.getPossibleHouses()
+    houses = gameState.getPossibleHouses()
 
-    "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    def mapHouseAssign(assign):
+        return houses[[BOTTOM_LEFT_VAL, TOP_LEFT_VAL, BOTTOM_RIGHT_VAL, TOP_RIGHT_VAL].index(assign)]
+
+    def ghostOrFoodOrNone(pos, food, ghost):
+        if pos in gameState.getHouseWalls(mapHouseAssign(food)):
+            return (PROB_FOOD_RED, 1 - PROB_FOOD_RED, 0)
+        elif pos in gameState.getHouseWalls(mapHouseAssign(ghost)):
+            return (PROB_GHOST_RED, 1 - PROB_GHOST_RED, 0)
+        else:
+            return (0, 0, 1)
+
+    for house in houses:
+        for pos in gameState.getHouseWalls(house):
+            var = OBS_VAR_TEMPLATE % pos
+            factor = bn.Factor(
+                [var], [FOOD_HOUSE_VAR, GHOST_HOUSE_VAR], bayesNet.variableDomainsDict())
+            for assign in factor.getAllPossibleAssignmentDicts():
+                r, b, n = ghostOrFoodOrNone(
+                    pos, assign[FOOD_HOUSE_VAR], assign[GHOST_HOUSE_VAR])
+                factor.setProbability(
+                    assign, {"red": r, "blue": b, "none": n}[assign[var]])
+            bayesNet.setCPT(var, factor)
+
 
 def getMostLikelyFoodHousePosition(evidence, bayesNet, eliminationOrder):
     """
@@ -220,8 +244,11 @@ def getMostLikelyFoodHousePosition(evidence, bayesNet, eliminationOrder):
 
     (This should be a very short method.)
     """
-    "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    factor = inference.inferenceByVariableElimination(
+        bayesNet, FOOD_HOUSE_VAR, evidence, eliminationOrder)
+    pairs = [(assign, factor.getProbability(assign))
+             for assign in factor.getAllPossibleAssignmentDicts()]
+    return sorted(pairs, key=lambda x: x[1], reverse=True)[0][0]
 
 
 class BayesAgent(game.Agent):
@@ -247,8 +274,10 @@ class BayesAgent(game.Agent):
         legal = list(gameState.getLegalActions())
         legal.remove(Directions.STOP)
         random.shuffle(legal)
-        successors = [gameState.generatePacmanSuccessor(a).getPacmanPosition() for a in legal]
-        ls = [(a, s) for a, s in zip(legal, successors) if s not in gameState.getPossibleHouses()]
+        successors = [gameState.generatePacmanSuccessor(
+            a).getPacmanPosition() for a in legal]
+        ls = [(a, s) for a, s in zip(legal, successors)
+              if s not in gameState.getPossibleHouses()]
         ls.sort(key=lambda p: p[1] in self.visited)
         return ls[0][0]
 
@@ -267,9 +296,10 @@ class BayesAgent(game.Agent):
     def goToBest(self, gameState):
         evidence = self.getEvidence(gameState)
         unknownVars = [o for o in self.obsVars if o not in evidence]
-        eliminationOrder = unknownVars + [X_POS_VAR, Y_POS_VAR, GHOST_HOUSE_VAR]
+        eliminationOrder = unknownVars + \
+            [X_POS_VAR, Y_POS_VAR, GHOST_HOUSE_VAR]
         bestFoodAssignment = getMostLikelyFoodHousePosition(evidence,
-                self.bayesNet, eliminationOrder)
+                                                            self.bayesNet, eliminationOrder)
 
         tx, ty = dict(
             zip([BOTTOM_LEFT_VAL, TOP_LEFT_VAL, BOTTOM_RIGHT_VAL, TOP_RIGHT_VAL],
@@ -285,6 +315,7 @@ class BayesAgent(game.Agent):
                 bestAction = action
         return bestAction
 
+
 class VPIAgent(BayesAgent):
 
     def __init__(self):
@@ -295,12 +326,12 @@ class VPIAgent(BayesAgent):
         EAST = Directions.EAST
         WEST = Directions.WEST
         self.exploreActionsRemaining = \
-                list(reversed([NORTH, NORTH, NORTH, NORTH, EAST, EAST, EAST,
-                    EAST, SOUTH, SOUTH, SOUTH, SOUTH, WEST, WEST, WEST, WEST]))
+            list(reversed([NORTH, NORTH, NORTH, NORTH, EAST, EAST, EAST,
+                           EAST, SOUTH, SOUTH, SOUTH, SOUTH, WEST, WEST, WEST, WEST]))
 
     def reveal(self, gameState):
         bottomLeftPos, topLeftPos, bottomRightPos, topRightPos = \
-                gameState.getPossibleHouses()
+            gameState.getPossibleHouses()
         for housePos in [bottomLeftPos, topLeftPos, bottomRightPos]:
             for ox, oy in gameState.getHouseWalls(housePos):
                 gameState.data.observedPositions[ox][oy] = True
@@ -315,7 +346,7 @@ class VPIAgent(BayesAgent):
         unknownVars = [o for o in self.obsVars if o not in evidence]
         eliminationOrder = unknownVars + [X_POS_VAR, Y_POS_VAR]
         houseMarginals = inference.inferenceByVariableElimination(self.bayesNet,
-                [FOOD_HOUSE_VAR, GHOST_HOUSE_VAR], evidence, eliminationOrder)
+                                                                  [FOOD_HOUSE_VAR, GHOST_HOUSE_VAR], evidence, eliminationOrder)
 
         probs = [0 for i in range(8)]
         outcomes = []
@@ -326,15 +357,15 @@ class VPIAgent(BayesAgent):
             outcomes.append(outcomeEvidence)
 
         for foodHouseVal, ghostHouseVal in [(TOP_LEFT_VAL, TOP_RIGHT_VAL),
-                (TOP_RIGHT_VAL, TOP_LEFT_VAL)]:
+                                            (TOP_RIGHT_VAL, TOP_LEFT_VAL)]:
 
             condEvidence = dict(evidence)
             condEvidence.update({FOOD_HOUSE_VAR: foodHouseVal,
-                GHOST_HOUSE_VAR: ghostHouseVal})
+                                 GHOST_HOUSE_VAR: ghostHouseVal})
             assignmentProb = houseMarginals.getProbability(condEvidence)
 
             oneObsMarginal = inference.inferenceByVariableElimination(self.bayesNet,
-                    [firstUnk], condEvidence, restUnk + [X_POS_VAR, Y_POS_VAR])
+                                                                      [firstUnk], condEvidence, restUnk + [X_POS_VAR, Y_POS_VAR])
 
             assignment = oneObsMarginal.getAllPossibleAssignmentDicts()[0]
             assignment[firstUnk] = RED_OBS_VAL
@@ -342,12 +373,11 @@ class VPIAgent(BayesAgent):
 
             for nRed in range(8):
                 outcomeProb = combinations(7, nRed) * \
-                        redProb ** nRed * (1 - redProb) ** (7 - nRed)
+                    redProb ** nRed * (1 - redProb) ** (7 - nRed)
                 outcomeProb *= assignmentProb
                 probs[nRed] += outcomeProb
 
         return list(zip(probs, outcomes))
-
 
     def getAction(self, gameState):
 
@@ -358,13 +388,13 @@ class VPIAgent(BayesAgent):
             enterEliminationOrder = unknownVars + [X_POS_VAR, Y_POS_VAR]
             exploreEliminationOrder = [X_POS_VAR, Y_POS_VAR]
 
-            print (evidence)
-            print (enterEliminationOrder)
-            print (exploreEliminationOrder)
+            print(evidence)
+            print(enterEliminationOrder)
+            print(exploreEliminationOrder)
             enterLeftValue, enterRightValue = \
-                    self.computeEnterValues(evidence, enterEliminationOrder)
+                self.computeEnterValues(evidence, enterEliminationOrder)
             exploreValue = self.computeExploreValue(evidence,
-                    exploreEliminationOrder)
+                                                    exploreEliminationOrder)
 
             # TODO double-check
             enterLeftValue -= 4
@@ -391,7 +421,7 @@ class VPIAgent(BayesAgent):
 
     def enterAction(self, gameState, left=True):
         bottomLeftPos, topLeftPos, bottomRightPos, topRightPos = \
-                gameState.getPossibleHouses()
+            gameState.getPossibleHouses()
 
         dest = topLeftPos if left else topRightPos
 
@@ -399,7 +429,7 @@ class VPIAgent(BayesAgent):
         neighbors = [gameState.generatePacmanSuccessor(a) for a in actions]
         neighborStates = [s.getPacmanPosition() for s in neighbors]
         best = min(zip(actions, neighborStates),
-                key=lambda x: self.distances[x[1], dest])
+                   key=lambda x: self.distances[x[1], dest])
         return best[0]
 
     def exploreAction(self, gameState):
@@ -408,7 +438,7 @@ class VPIAgent(BayesAgent):
 
         evidence = self.getEvidence(gameState)
         enterLeftValue, enterRightValue = self.computeEnterValues(evidence,
-                [X_POS_VAR, Y_POS_VAR])
+                                                                  [X_POS_VAR, Y_POS_VAR])
 
         if enterLeftValue > enterRightValue:
             self.behavior = ENTER_LEFT
@@ -417,10 +447,12 @@ class VPIAgent(BayesAgent):
             self.behavior = ENTER_RIGHT
             return self.enterAction(gameState, left=False)
 
+
 def cacheDistances(state):
     width, height = state.data.layout.width, state.data.layout.height
     states = [(x, y) for x in range(width) for y in range(height)]
-    walls = state.getWalls().asList() + state.data.layout.redWalls.asList() + state.data.layout.blueWalls.asList()
+    walls = state.getWalls().asList() + state.data.layout.redWalls.asList() + \
+        state.data.layout.blueWalls.asList()
     states = [s for s in states if s not in walls]
     distances = {}
     for i in states:
@@ -434,15 +466,18 @@ def cacheDistances(state):
     for k in states:
         for i in states:
             for j in states:
-                if distances[i,j] > distances[i,k] + distances[k,j]:
-                    distances[i,j] = distances[i,k] + distances[k,j]
+                if distances[i, j] > distances[i, k] + distances[k, j]:
+                    distances[i, j] = distances[i, k] + distances[k, j]
 
     return distances
 
 # http://stackoverflow.com/questions/4941753/is-there-a-math-ncr-function-in-python
+
+
 def combinations(n, r):
     r = min(r, n-r)
-    if r == 0: return 1
+    if r == 0:
+        return 1
     numer = reduce(op.mul, xrange(n, n-r, -1))
     denom = reduce(op.mul, xrange(1, r+1))
     return numer / denom
