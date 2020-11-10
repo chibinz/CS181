@@ -169,7 +169,15 @@ class InferenceModule:
         """
         Return the probability P(noisyDistance | pacmanPosition, ghostPosition).
         """
-        "*** YOUR CODE HERE ***"
+        trueDistance = manhattanDistance(pacmanPosition, ghostPosition)
+
+        if noisyDistance == None:
+            return int(ghostPosition == jailPosition)
+        else:
+            if ghostPosition == jailPosition:
+                return 0
+            else:
+                return busters.getObservationProbability(noisyDistance, trueDistance)
 
     def setGhostPosition(self, gameState, ghostPosition, index):
         """
@@ -365,7 +373,7 @@ class JointParticleFilter(ParticleFilter):
 
     def initializeUniformly(self, gameState):
         """
-        Initialize particles to be consistent with a uniform prior. Particles
+        Initialize particles        "*** YOUR CODE HERE ***" to be consistent with a uniform prior. Particles
         should be evenly distributed across positions in order to ensure a
         uniform prior.
         """
