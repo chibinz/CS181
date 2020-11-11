@@ -305,14 +305,14 @@ class ExactInference(InferenceModule):
         Pacman's current position. However, this is not a problem, as Pacman's
         current position is known.
         """
-        newDict = DiscreteDistribution()
+        newDist = DiscreteDistribution()
 
         for pos in self.allPositions:
             newPosDist = self.getPositionDistribution(gameState, pos)
             for k, v in newPosDist.items():
-                newDict[k] += self.beliefs[pos] * v
+                newDist[k] += self.beliefs[pos] * v
 
-        self.beliefs = newDict
+        self.beliefs = newDist
 
     def getBeliefDistribution(self):
         return self.beliefs
@@ -355,8 +355,8 @@ class ParticleFilter(InferenceModule):
         """
         belief = self.getBeliefDistribution()
         for pos in self.allPositions:
-            belief[pos] *= self.getObservationProb(observation, gameState.getPacmanPosition(
-            ), pos, self.getJailPosition())
+            belief[pos] *= self.getObservationProb(observation, gameState.getPacmanPosition(),
+                                                   pos, self.getJailPosition())
         belief.normalize()
         belief.unifyIfZero()
         self.particles = [belief.sample() for _ in range(self.numParticles)]
@@ -366,7 +366,10 @@ class ParticleFilter(InferenceModule):
         Sample each particle's next state based on its current state and the
         gameState.
         """
-        "*** YOUR CODE HERE ***"
+        from collections import Counter
+
+        self.particles = [self.getPositionDistribution(gameState, k).sample(
+        ) for k, v in Counter(self.particles).items() for _ in range(v)]
 
     def getBeliefDistribution(self):
         """
