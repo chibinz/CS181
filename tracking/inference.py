@@ -340,8 +340,8 @@ class ParticleFilter(InferenceModule):
         distributed across positions in order to ensure a uniform prior. Use
         self.particles for the list of particles.
         """
-        self.particles = []
-        "*** YOUR CODE HERE ***"
+        self.particles = [pos for pos in self.legalPositions for _ in range(
+            self.numParticles // len(self.legalPositions))]
 
     def observeUpdate(self, observation, gameState):
         """
@@ -371,7 +371,10 @@ class ParticleFilter(InferenceModule):
         locations conditioned on all evidence and time passage. This method
         essentially converts a list of particles into a belief distribution.
         """
-        "*** YOUR CODE HERE ***"
+        dist = DiscreteDistribution()
+        for p in self.particles:
+            dist[p] += 1 / self.numParticles
+        return dist
 
 
 class JointParticleFilter(ParticleFilter):
