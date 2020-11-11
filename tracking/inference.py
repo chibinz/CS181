@@ -162,6 +162,8 @@ class InferenceModule:
                 dist[successorPosition] = prob * (1.0 - mult)
         return dist
 
+    import functools
+
     def getPositionDistribution(self, gameState, pos, index=None, agent=None):
         """
         Return a distribution over successor positions of the ghost from the
@@ -407,8 +409,10 @@ class JointParticleFilter(ParticleFilter):
         should be evenly distributed across positions in order to ensure a
         uniform prior.
         """
-        ghosts = list(itertools.product(self.legalPositions, repeat=self.numGhosts))
-        self.particles = [ghosts[k % len(ghosts)] for k in range(self.numParticles)]
+        ghosts = list(itertools.product(
+            self.legalPositions, repeat=self.numGhosts))
+        self.particles = [ghosts[k % len(ghosts)]
+                          for k in range(self.numParticles)]
 
     def addGhostAgent(self, agent):
         """
@@ -425,7 +429,7 @@ class JointParticleFilter(ParticleFilter):
         Resample the set of particles using the likelihood of the noisy
         observations.
         """
-        observation=gameState.getNoisyGhostDistances()
+        observation = gameState.getNoisyGhostDistances()
         self.observeUpdate(observation, gameState)
 
     def observeUpdate(self, observation, gameState):
@@ -440,27 +444,47 @@ class JointParticleFilter(ParticleFilter):
         be reinitialized by calling initializeUniformly. The total method of
         the DiscreteDistribution may be useful.
         """
-        "*** YOUR CODE HERE ***"
+        from collections import Counter
+
+        belief = DiscreteDistribution()
+        for pos in self.particles:
+            w = 1
+            for i in range(self.numGhosts):
+                w *= self.getObservationProb(
+                    observation[i], gameState.getPacmanPosition(), pos[i], self.getJailPosition(i))
+            belief[pos] += w
+        belief.normalize()
+        if sum(belief.values()) == 0:
+            self.initializeUniformly(gameState)
+        else:
+            self.particles = [belief.sample()
+                              for _ in range(self.numParticles)]
 
     def elapseTime(self, gameState):
         """
         Sample each particle's next state based on its current state and the
         gameState.
         """
-        newParticles=[]
+        newParticles = []
+        cache = {}
         for oldParticle in self.particles:
-            newParticle=list(oldParticle)  # A list of ghost positions
+            newParticle = list(oldParticle)  # A list of ghost positions
 
             # now loop through and update each entry in newParticle...
             "*** YOUR CODE HERE ***"
-
+            for i in range(len(oldParticle)):
+                k = (oldParticle, i)
+                if k not in cache.keys():
+                    cache[k] = self.getPositionDistribution(
+                        gameState, oldParticle, index=i, agent=self.ghostAgents[i])
+                newParticle[i] = cache[k].sample()
             """*** END YOUR CODE HERE ***"""
             newParticles.append(tuple(newParticle))
-        self.particles=newParticles
+        self.particles = newParticles
 
 
 # One JointInference module is shared globally across instances of MarginalInference
-jointInference=JointParticleFilter()
+jointInference = JointParticleFilter()
 
 
 class MarginalInference(InferenceModule):
@@ -496,8 +520,8 @@ class MarginalInference(InferenceModule):
         Return the marginal belief over a particular ghost by summing out the
         others.
         """
-        jointDistribution=jointInference.getBeliefDistribution()
-        dist=DiscreteDistribution()
+        jointDistribution = jointInference.getBeliefDistribution()
+        dist = DiscreteDistribution()
         for t, prob in jointDistribution.items():
             dist[t[self.index - 1]] += prob
         return dist
