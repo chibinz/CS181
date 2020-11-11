@@ -403,12 +403,12 @@ class JointParticleFilter(ParticleFilter):
 
     def initializeUniformly(self, gameState):
         """
-        Initialize particles        "*** YOUR CODE HERE ***" to be consistent with a uniform prior. Particles
+        Initialize particles to be consistent with a uniform prior. Particles
         should be evenly distributed across positions in order to ensure a
         uniform prior.
         """
-        self.particles = []
-        "*** YOUR CODE HERE ***"
+        ghosts = list(itertools.product(self.legalPositions, repeat=self.numGhosts))
+        self.particles = [ghosts[k % len(ghosts)] for k in range(self.numParticles)]
 
     def addGhostAgent(self, agent):
         """
@@ -425,7 +425,7 @@ class JointParticleFilter(ParticleFilter):
         Resample the set of particles using the likelihood of the noisy
         observations.
         """
-        observation = gameState.getNoisyGhostDistances()
+        observation=gameState.getNoisyGhostDistances()
         self.observeUpdate(observation, gameState)
 
     def observeUpdate(self, observation, gameState):
@@ -447,20 +447,20 @@ class JointParticleFilter(ParticleFilter):
         Sample each particle's next state based on its current state and the
         gameState.
         """
-        newParticles = []
+        newParticles=[]
         for oldParticle in self.particles:
-            newParticle = list(oldParticle)  # A list of ghost positions
+            newParticle=list(oldParticle)  # A list of ghost positions
 
             # now loop through and update each entry in newParticle...
             "*** YOUR CODE HERE ***"
 
             """*** END YOUR CODE HERE ***"""
             newParticles.append(tuple(newParticle))
-        self.particles = newParticles
+        self.particles=newParticles
 
 
 # One JointInference module is shared globally across instances of MarginalInference
-jointInference = JointParticleFilter()
+jointInference=JointParticleFilter()
 
 
 class MarginalInference(InferenceModule):
@@ -496,8 +496,8 @@ class MarginalInference(InferenceModule):
         Return the marginal belief over a particular ghost by summing out the
         others.
         """
-        jointDistribution = jointInference.getBeliefDistribution()
-        dist = DiscreteDistribution()
+        jointDistribution=jointInference.getBeliefDistribution()
+        dist=DiscreteDistribution()
         for t, prob in jointDistribution.items():
             dist[t[self.index - 1]] += prob
         return dist
