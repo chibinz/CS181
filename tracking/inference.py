@@ -76,10 +76,14 @@ class DiscreteDistribution(dict):
         {}
         """
         s = self.total()
-        if s == 0:
-            return
-        for k in self.keys():
-            self[k] = self[k] / s
+        if s != 0:
+            for k in self.keys():
+                self[k] = self[k] / s
+
+    def unifyIfZero(self):
+        if self.total() == 0:
+            for k in self.keys():
+                self[k] = 1 / len(self.keys())
 
     def sample(self):
         """
@@ -102,7 +106,6 @@ class DiscreteDistribution(dict):
         >>> round(samples.count('d') * 1.0/N, 1)
         0.0
         """
-        import random
         return random.choices(list(self.keys()), list(self.values()))[0]
 
 
@@ -177,13 +180,8 @@ class InferenceModule:
         """
         trueDistance = manhattanDistance(pacmanPosition, ghostPosition)
 
-        if noisyDistance == None:
-            return int(ghostPosition == jailPosition)
-        else:
-            if ghostPosition == jailPosition:
-                return 0
-            else:
-                return busters.getObservationProbability(noisyDistance, trueDistance)
+        return int(ghostPosition == jailPosition) if noisyDistance == None else (
+            int(ghostPosition != jailPosition) * busters.getObservationProbability(noisyDistance, trueDistance))
 
     def setGhostPosition(self, gameState, ghostPosition, index):
         """
@@ -355,8 +353,13 @@ class ParticleFilter(InferenceModule):
         be reinitialized by calling initializeUniformly. The total method of
         the DiscreteDistribution may be useful.
         """
-
-        print(observation)
+        belief = self.getBeliefDistribution()
+        for pos in self.allPositions:
+            belief[pos] *= self.getObservationProb(observation, gameState.getPacmanPosition(
+            ), pos, self.getJailPosition())
+        belief.normalize()
+        belief.unifyIfZero()
+        self.particles = [belief.sample() for _ in range(self.numParticles)]
 
     def elapseTime(self, gameState):
         """
