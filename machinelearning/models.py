@@ -53,13 +53,13 @@ class PerceptronModel(object):
 
 
 class GenericNNModel(object):
-    def __init__(self, dimension, lossFunction, batchSize, learningRate):
+    def __init__(self, dimension, lossFunction, batchSize, learningRate, targetAccuracy):
         self.weight = list(map(lambda x: nn.Parameter(*x), dimension))
         self.bias = list(map(lambda x: nn.Parameter(1, x[1]), dimension))
         self.lossFunction = lossFunction
         self.batchSize = batchSize
         self.learningRate = learningRate
-        self.targetLoss = 0.01
+        self.targetAccuracy = targetAccuracy
         print(self.weight, self.bias)
 
     def run(self, x):
@@ -77,13 +77,14 @@ class GenericNNModel(object):
         try:
             dataset.get_validation_accuracy()
         except Exception:
+            print("Adding method for dataset!")
             def get_accuracy(s):
                 sample = list(map(lambda p: nn.as_scalar(
                     self.get_loss(*p)), s.iterate_once(self.batchSize)))
-                return sum(sample) / len(sample)
+                return 1 - sum(sample) / len(sample)
             dataset.get_validation_accuracy = partial(get_accuracy, dataset)
 
-        while dataset.get_validation_accuracy() < 0.99:
+        while dataset.get_validation_accuracy() < self.targetAccuracy:
             for x, y in dataset.iterate_once(self.batchSize):
                 gradients = nn.gradients(
                     self.get_loss(x, y), self.weight + self.bias)
@@ -99,8 +100,7 @@ class RegressionModel(GenericNNModel):
     """
 
     def __init__(self):
-        dimension = [(1, 64), (64, 1)]
-        super().__init__(dimension, nn.SquareLoss, 20, 0.01)
+        super().__init__([(1, 64), (64, 1)], nn.SquareLoss, 20, 0.01, 0.98)
 
     # def run(self, x):
         """
