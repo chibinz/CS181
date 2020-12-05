@@ -78,6 +78,7 @@ class GenericNNModel(object):
             dataset.get_validation_accuracy()
         except Exception:
             print("Adding method for dataset!")
+
             def get_accuracy(s):
                 sample = list(map(lambda p: nn.as_scalar(
                     self.get_loss(*p)), s.iterate_once(self.batchSize)))
@@ -102,37 +103,8 @@ class RegressionModel(GenericNNModel):
     def __init__(self):
         super().__init__([(1, 64), (64, 1)], nn.SquareLoss, 20, 0.01, 0.98)
 
-    # def run(self, x):
-        """
-        Runs the model for a batch of examples.
 
-        Inputs:
-            x: a node with shape (batch_size x 1)
-        Returns:
-            A node with shape (batch_size x 1) containing predicted y-values
-        """
-        "*** YOUR CODE HERE ***"
-
-    # def get_loss(self, x, y):
-        """
-        Computes the loss for a batch of examples.
-
-        Inputs:
-            x: a node with shape (batch_size x 1)
-            y: a node with shape (batch_size x 1), containing the true y-values
-                to be used for training
-        Returns: a loss node
-        """
-        "*** YOUR CODE HERE ***"
-
-    # def train(self, dataset):
-        """
-        Trains the model.
-        """
-        "*** YOUR CODE HERE ***"
-
-
-class DigitClassificationModel(object):
+class DigitClassificationModel(GenericNNModel):
     """
     A model for handwritten digit classification using the MNIST dataset.
 
@@ -148,45 +120,8 @@ class DigitClassificationModel(object):
     """
 
     def __init__(self):
-        # Initialize your model parameters here
-        "*** YOUR CODE HERE ***"
-
-    def run(self, x):
-        """
-        Runs the model for a batch of examples.
-
-        Your model should predict a node with shape (batch_size x 10),
-        containing scores. Higher scores correspond to greater probability of
-        the image belonging to a particular class.
-
-        Inputs:
-            x: a node with shape (batch_size x 784)
-        Output:
-            A node with shape (batch_size x 10) containing predicted scores
-                (also called logits)
-        """
-        "*** YOUR CODE HERE ***"
-
-    def get_loss(self, x, y):
-        """
-        Computes the loss for a batch of examples.
-
-        The correct labels `y` are represented as a node with shape
-        (batch_size x 10). Each row is a one-hot vector encoding the correct
-        digit class (0-9).
-
-        Inputs:
-            x: a node with shape (batch_size x 784)
-            y: a node with shape (batch_size x 10)
-        Returns: a loss node
-        """
-        "*** YOUR CODE HERE ***"
-
-    def train(self, dataset):
-        """
-        Trains the model.
-        """
-        "*** YOUR CODE HERE ***"
+        super().__init__([(784, 400), (400, 400), (400, 10)],
+                         nn.SoftmaxLoss, 60, 0.05, 0.98)
 
 
 class LanguageIDModel(object):
