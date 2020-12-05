@@ -53,23 +53,20 @@ class PerceptronModel(object):
 
 
 class GenericNNModel(object):
-    def __init__(self, dimension, lossFunction, batchSize, learningRate, targetAccuracy):
-        dim = [(dimension[i], dimension[i+1])
-               for i in range(0, len(dimension)-1)]
+    def __init__(self, widths, lossFunction, batchSize, learningRate, targetAccuracy):
+        dimension = [(widths[i], widths[i+1]) for i in range(0, len(widths)-1)]
         self.weight = list(map(lambda x: nn.Parameter(*x), dimension))
         self.bias = list(map(lambda x: nn.Parameter(1, x[1]), dimension))
         self.lossFunction = lossFunction
         self.batchSize = batchSize
         self.learningRate = learningRate
         self.targetAccuracy = targetAccuracy
-        print(self.weight, self.bias)
 
     def run(self, x):
         layer = x
         for w, b in list(zip(self.weight, self.bias))[:-1]:
             layer = nn.ReLU(nn.AddBias(nn.Linear(layer, w), b))
 
-        # Do not use ReLU for last layer
         return nn.AddBias(nn.Linear(layer, self.weight[-1]), self.bias[-1])
 
     def get_loss(self, x, y):
@@ -79,8 +76,6 @@ class GenericNNModel(object):
         try:
             dataset.get_validation_accuracy()
         except Exception:
-            print("Adding method for dataset!")
-
             def get_accuracy(s):
                 sample = list(map(lambda p: nn.as_scalar(
                     self.get_loss(*p)), s.iterate_once(self.batchSize)))
@@ -102,8 +97,8 @@ class RegressionModel(GenericNNModel):
     to approximate sin(x) on the interval [-2pi, 2pi] to reasonable precision.
     """
 
-    def __init__(self):
-        super().__init__([(1, 64), (64, 1)], nn.SquareLoss, 20, 0.01, 0.98)
+    def __init__(self):  # 2 layers
+        super().__init__([1, 64, 1], nn.SquareLoss, 100, 0.1, 0.98)
 
 
 class DigitClassificationModel(GenericNNModel):
@@ -121,9 +116,8 @@ class DigitClassificationModel(GenericNNModel):
     working on this part of the project.)
     """
 
-    def __init__(self):
-        super().__init__([(784, 400), (400, 10)],
-                         nn.SoftmaxLoss, 100, 0.5, 0.98)
+    def __init__(self):  # 2 layers
+        super().__init__([784, 400, 10], nn.SoftmaxLoss, 100, 0.5, 0.975)
 
 
 class LanguageIDModel(GenericNNModel):
@@ -135,39 +129,10 @@ class LanguageIDModel(GenericNNModel):
     working on this part of the project.)
     """
 
-    def __init__(self):
-        super().__init__([(47, 200), (200, 200), (200, 5)],  # Fixed to 3 layers
-                         nn.SoftmaxLoss, 100, 0.1, 0.85)
+    def __init__(self):  # Fix to 3 layers
+        super().__init__([47, 200, 200, 5], nn.SoftmaxLoss, 100, 0.1, 0.85)
 
     def run(self, xs):
-        """
-        Runs the model for a batch of examples.
-
-        Although words have different lengths, our data processing guarantees
-        that within a single batch, all words will be of the same length (L).
-
-        Here `xs` will be a list of length L. Each element of `xs` will be a
-        node with shape (batch_size x self.num_chars), where every row in the
-        array is a one-hot vector encoding of a character. For example, if we
-        have a batch of 8 three-letter words where the last word is "cat", then
-        xs[1] will be a node that contains a 1 at position (7, 0). Here the
-        index 7 reflects the fact that "cat" is the last word in the batch, and
-        the index 0 reflects the fact that the letter "a" is the inital (0th)
-        letter of our combined alphabet for this task.
-
-        Your model should use a Recurrent Neural Network to summarize the list
-        `xs` into a single node of shape (batch_size x hidden_size), for your
-        choice of hidden_size. It should then calculate a node of shape
-        (batch_size x 5) containing scores, where higher scores correspond to
-        greater probability of the word originating from a particular language.
-
-        Inputs:
-            xs: a list with L elements (one per character), where each element
-                is a node with shape (batch_size x self.num_chars)
-        Returns:
-            A node with shape (batch_size x 5) containing predicted scores
-                (also called logits)
-        """
         layer = nn.Linear(nn.DataNode(xs[0].data), self.weight[0])
         for x in xs:
             layer = nn.ReLU(nn.AddBias(nn.Linear(
