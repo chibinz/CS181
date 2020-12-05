@@ -120,11 +120,11 @@ class DigitClassificationModel(GenericNNModel):
     """
 
     def __init__(self):
-        super().__init__([(784, 400), (400, 400), (400, 10)],
-                         nn.SoftmaxLoss, 60, 0.05, 0.98)
+        super().__init__([(784, 400), (400, 200), (200, 10)],
+                         nn.SoftmaxLoss, 60, 0.1, 0.98)
 
 
-class LanguageIDModel(object):
+class LanguageIDModel(GenericNNModel):
     """
     A model for language identification at a single-word granularity.
 
@@ -134,15 +134,8 @@ class LanguageIDModel(object):
     """
 
     def __init__(self):
-        # Our dataset contains words from five different languages, and the
-        # combined alphabets of the five languages contain a total of 47 unique
-        # characters.
-        # You can refer to self.num_chars or len(self.languages) in your code
-        self.num_chars = 47
-        self.languages = ["English", "Spanish", "Finnish", "Dutch", "Polish"]
-
-        # Initialize your model parameters here
-        "*** YOUR CODE HERE ***"
+        super().__init__([(47, 200), (200, 200), (200, 5)], # Fixed to 3 layers
+                         nn.SoftmaxLoss, 100, 0.1, 0.85)
 
     def run(self, xs):
         """
@@ -173,26 +166,8 @@ class LanguageIDModel(object):
             A node with shape (batch_size x 5) containing predicted scores
                 (also called logits)
         """
-        "*** YOUR CODE HERE ***"
-
-    def get_loss(self, xs, y):
-        """
-        Computes the loss for a batch of examples.
-
-        The correct labels `y` are represented as a node with shape
-        (batch_size x 5). Each row is a one-hot vector encoding the correct
-        language.
-
-        Inputs:
-            xs: a list with L elements (one per character), where each element
-                is a node with shape (batch_size x self.num_chars)
-            y: a node with shape (batch_size x 5)
-        Returns: a loss node
-        """
-        "*** YOUR CODE HERE ***"
-
-    def train(self, dataset):
-        """
-        Trains the model.
-        """
-        "*** YOUR CODE HERE ***"
+        layer = nn.Linear(nn.DataNode(xs[0].data), self.weight[0])
+        for x in xs:
+            layer = nn.ReLU(nn.AddBias(nn.Linear(
+                nn.Add(nn.Linear(x, self.weight[0]), layer), self.weight[1]), self.bias[1]))
+        return nn.AddBias(nn.Linear(layer, self.weight[2]), self.bias[2])
