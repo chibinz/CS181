@@ -54,6 +54,8 @@ class PerceptronModel(object):
 
 class GenericNNModel(object):
     def __init__(self, dimension, lossFunction, batchSize, learningRate, targetAccuracy):
+        dim = [(dimension[i], dimension[i+1])
+               for i in range(0, len(dimension)-1)]
         self.weight = list(map(lambda x: nn.Parameter(*x), dimension))
         self.bias = list(map(lambda x: nn.Parameter(1, x[1]), dimension))
         self.lossFunction = lossFunction
@@ -120,8 +122,8 @@ class DigitClassificationModel(GenericNNModel):
     """
 
     def __init__(self):
-        super().__init__([(784, 400), (400, 200), (200, 10)],
-                         nn.SoftmaxLoss, 60, 0.1, 0.98)
+        super().__init__([(784, 400), (400, 10)],
+                         nn.SoftmaxLoss, 100, 0.5, 0.98)
 
 
 class LanguageIDModel(GenericNNModel):
@@ -134,7 +136,7 @@ class LanguageIDModel(GenericNNModel):
     """
 
     def __init__(self):
-        super().__init__([(47, 200), (200, 200), (200, 5)], # Fixed to 3 layers
+        super().__init__([(47, 200), (200, 200), (200, 5)],  # Fixed to 3 layers
                          nn.SoftmaxLoss, 100, 0.1, 0.85)
 
     def run(self, xs):
