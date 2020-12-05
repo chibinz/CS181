@@ -1,4 +1,7 @@
 import nn
+from itertools import chain
+from functools import partial
+
 
 class PerceptronModel(object):
     def __init__(self, dimensions):
@@ -34,8 +37,7 @@ class PerceptronModel(object):
 
         Returns: 1 or -1
         """
-        scalar = nn.as_scalar(self.run(x))
-        return 1 if scalar >= 0 else -1
+        return 1 if nn.as_scalar(self.run(x)) >= 0 else -1
 
     def train(self, dataset):
         """
@@ -49,17 +51,58 @@ class PerceptronModel(object):
                     converged = False
                     self.w.update(x, nn.as_scalar(y))
 
-class RegressionModel(object):
+
+class GenericNNModel(object):
+    def __init__(self, dimension, lossFunction, batchSize, learningRate):
+        self.weight = list(map(lambda x: nn.Parameter(*x), dimension))
+        self.bias = list(map(lambda x: nn.Parameter(1, x[1]), dimension))
+        self.lossFunction = lossFunction
+        self.batchSize = batchSize
+        self.learningRate = learningRate
+        self.targetLoss = 0.01
+        print(self.weight, self.bias)
+
+    def run(self, x):
+        layer = x
+        for w, b in list(zip(self.weight, self.bias))[:-1]:
+            layer = nn.ReLU(nn.AddBias(nn.Linear(layer, w), b))
+
+        # Do not use ReLU for last layer
+        return nn.AddBias(nn.Linear(layer, self.weight[-1]), self.bias[-1])
+
+    def get_loss(self, x, y):
+        return self.lossFunction(self.run(x), y)
+
+    def train(self, dataset):
+        try:
+            dataset.get_validation_accuracy()
+        except Exception:
+            def get_accuracy(s):
+                sample = list(map(lambda p: nn.as_scalar(
+                    self.get_loss(*p)), s.iterate_once(self.batchSize)))
+                return sum(sample) / len(sample)
+            dataset.get_validation_accuracy = partial(get_accuracy, dataset)
+
+        while dataset.get_validation_accuracy() < 0.99:
+            for x, y in dataset.iterate_once(self.batchSize):
+                gradients = nn.gradients(
+                    self.get_loss(x, y), self.weight + self.bias)
+                for param, grad in zip(chain(self.weight, self.bias), gradients):
+                    param.update(grad, -self.learningRate)
+
+
+class RegressionModel(GenericNNModel):
     """
     A neural network model for approximating a function that maps from real
     numbers to real numbers. The network should be sufficiently large to be able
     to approximate sin(x) on the interval [-2pi, 2pi] to reasonable precision.
     """
-    def __init__(self):
-        # Initialize your model parameters here
-        "*** YOUR CODE HERE ***"
 
-    def run(self, x):
+    def __init__(self):
+        dimension = [(1, 64), (64, 1)]
+        super().__init__(dimension, nn.SquareLoss, 20, 0.01)
+
+    # def run(self, x):
         """
         Runs the model for a batch of examples.
 
@@ -70,7 +113,7 @@ class RegressionModel(object):
         """
         "*** YOUR CODE HERE ***"
 
-    def get_loss(self, x, y):
+    # def get_loss(self, x, y):
         """
         Computes the loss for a batch of examples.
 
@@ -82,11 +125,12 @@ class RegressionModel(object):
         """
         "*** YOUR CODE HERE ***"
 
-    def train(self, dataset):
+    # def train(self, dataset):
         """
         Trains the model.
         """
         "*** YOUR CODE HERE ***"
+
 
 class DigitClassificationModel(object):
     """
@@ -102,6 +146,7 @@ class DigitClassificationModel(object):
     methods here. We recommend that you implement the RegressionModel before
     working on this part of the project.)
     """
+
     def __init__(self):
         # Initialize your model parameters here
         "*** YOUR CODE HERE ***"
@@ -143,6 +188,7 @@ class DigitClassificationModel(object):
         """
         "*** YOUR CODE HERE ***"
 
+
 class LanguageIDModel(object):
     """
     A model for language identification at a single-word granularity.
@@ -151,6 +197,7 @@ class LanguageIDModel(object):
     methods here. We recommend that you implement the RegressionModel before
     working on this part of the project.)
     """
+
     def __init__(self):
         # Our dataset contains words from five different languages, and the
         # combined alphabets of the five languages contain a total of 47 unique
