@@ -96,10 +96,8 @@ class RegressionModel(GenericNNModel):
     numbers to real numbers. The network should be sufficiently large to be able
     to approximate sin(x) on the interval [-2pi, 2pi] to reasonable precision.
     """
-
     def __init__(self):  # 2 layers
         super().__init__([1, 64, 1], nn.SquareLoss, 100, 0.1, 0.98)
-
 
 class DigitClassificationModel(GenericNNModel):
     """
@@ -115,10 +113,8 @@ class DigitClassificationModel(GenericNNModel):
     methods here. We recommend that you implement the RegressionModel before
     working on this part of the project.)
     """
-
     def __init__(self):  # 2 layers
         super().__init__([784, 400, 10], nn.SoftmaxLoss, 100, 0.5, 0.975)
-
 
 class LanguageIDModel(GenericNNModel):
     """
@@ -128,7 +124,6 @@ class LanguageIDModel(GenericNNModel):
     methods here. We recommend that you implement the RegressionModel before
     working on this part of the project.)
     """
-
     def __init__(self):  # Fix to 3 layers
         super().__init__([47, 200, 200, 5], nn.SoftmaxLoss, 100, 0.1, 0.85)
 
