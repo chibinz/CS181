@@ -30,6 +30,7 @@ import mdp
 import util
 
 from learningAgents import ValueEstimationAgent
+from itertools import cycle
 import collections
 
 
@@ -137,7 +138,12 @@ class AsynchronousValueIterationAgent(ValueIterationAgent):
         ValueIterationAgent.__init__(self, mdp, discount, iterations)
 
     def runValueIteration(self):
-        "*** YOUR CODE HERE ***"
+        for i, state in enumerate(cycle(self.mdp.getStates())):
+            if i == self.iterations:
+                break
+            if self.mdp.isTerminal(state):
+                continue
+            self.values[state] = self.getQValue(state, self.getAction(state))
 
 
 class PrioritizedSweepingValueIterationAgent(AsynchronousValueIterationAgent):
@@ -159,4 +165,3 @@ class PrioritizedSweepingValueIterationAgent(AsynchronousValueIterationAgent):
         ValueIterationAgent.__init__(self, mdp, discount, iterations)
 
     def runValueIteration(self):
-        "*** YOUR CODE HERE ***"
