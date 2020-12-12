@@ -30,7 +30,7 @@ import mdp
 import util
 
 from learningAgents import ValueEstimationAgent
-from itertools import cycle
+from itertools import cycle, islice
 import collections
 
 
@@ -67,8 +67,7 @@ class ValueIterationAgent(ValueEstimationAgent):
         for _ in range(self.iterations):
             nextValues = util.Counter()
             for state in self.mdp.getStates():
-                nextValues[state] = max(map(lambda a: self.computeQValueFromValues(state, a),
-                                            self.mdp.getPossibleActions(state)), default=0)
+                nextValues[state] = self.getMaxQ(state)
             self.values = nextValues
 
     def getValue(self, state):
@@ -97,6 +96,10 @@ class ValueIterationAgent(ValueEstimationAgent):
         """
         return max(self.mdp.getPossibleActions(state), default=None,
                    key=lambda a: self.computeQValueFromValues(state, a))
+
+    def getMaxQ(self, state):
+        return max(map(lambda a: self.computeQValueFromValues(state, a),
+                       self.mdp.getPossibleActions(state)), default=0)
 
     def getPolicy(self, state):
         return self.computeActionFromValues(state)
@@ -138,11 +141,10 @@ class AsynchronousValueIterationAgent(ValueIterationAgent):
         ValueIterationAgent.__init__(self, mdp, discount, iterations)
 
     def runValueIteration(self):
-        for i, state in enumerate(cycle(self.mdp.getStates())):
-            if i == self.iterations:
-                break
-            if self.mdp.isTerminal(state):
-                continue
+        def predicate(s):
+            return not self.mdp.isTerminal(s)
+
+        for state in filter(predicate, islice(cycle(self.mdp.getStates()), self.iterations)):
             self.values[state] = self.getQValue(state, self.getAction(state))
 
 
@@ -165,3 +167,29 @@ class PrioritizedSweepingValueIterationAgent(AsynchronousValueIterationAgent):
         ValueIterationAgent.__init__(self, mdp, discount, iterations)
 
     def runValueIteration(self):
+        predecessors = {}
+        queue = util.PriorityQueue()
+
+        for state in self.mdp.getStates():
+            predecessors[state] = set()
+
+        for state in self.mdp.getStates():
+            for action in self.mdp.getPossibleActions(state):
+                for pred, _ in self.mdp.getTransitionStatesAndProbs(state, action):
+                    predecessors[pred].add(state)
+
+        for state in self.mdp.getStates():
+            if not self.mdp.isTerminal(state):
+                diff = abs(self.values[state] - self.getMaxQ(state))
+                queue.push(state, -diff)
+
+        i = 0
+        while i < self.iterations and not queue.isEmpty():
+            i += 1
+            succ = queue.pop()
+            self.values[succ] = self.getMaxQ(succ)
+
+            for pred in predecessors[succ]:
+                diff = abs(self.values[pred] - self.getMaxQ(pred))
+                if diff > self.theta:
+                    queue.update(pred, -diff)
