@@ -140,11 +140,11 @@ class AsynchronousValueIterationAgent(ValueIterationAgent):
         """
         ValueIterationAgent.__init__(self, mdp, discount, iterations)
 
-    def runValueIteration(self):
-        def predicate(s):
-            return not self.mdp.isTerminal(s)
+    def notTerminal(self, state):
+        return not self.mdp.isTerminal(state)
 
-        for state in filter(predicate, islice(cycle(self.mdp.getStates()), self.iterations)):
+    def runValueIteration(self):
+        for state in filter(self.notTerminal, islice(cycle(self.mdp.getStates()), self.iterations)):
             self.values[state] = self.getQValue(state, self.getAction(state))
 
 
@@ -167,21 +167,17 @@ class PrioritizedSweepingValueIterationAgent(AsynchronousValueIterationAgent):
         ValueIterationAgent.__init__(self, mdp, discount, iterations)
 
     def runValueIteration(self):
-        predecessors = {}
+        predecessors = {state: set() for state in self.mdp.getStates()}
         queue = util.PriorityQueue()
-
-        for state in self.mdp.getStates():
-            predecessors[state] = set()
 
         for state in self.mdp.getStates():
             for action in self.mdp.getPossibleActions(state):
                 for pred, _ in self.mdp.getTransitionStatesAndProbs(state, action):
                     predecessors[pred].add(state)
 
-        for state in self.mdp.getStates():
-            if not self.mdp.isTerminal(state):
-                diff = abs(self.values[state] - self.getMaxQ(state))
-                queue.push(state, -diff)
+        for state in filter(self.notTerminal, self.mdp.getStates()):
+            diff = abs(self.values[state] - self.getMaxQ(state))
+            queue.push(state, -diff)
 
         i = 0
         while i < self.iterations and not queue.isEmpty():
