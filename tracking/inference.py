@@ -18,6 +18,7 @@ import busters
 import game
 
 from util import manhattanDistance
+from functools import lru_cache
 
 
 class DiscreteDistribution(dict):
@@ -466,19 +467,16 @@ class JointParticleFilter(ParticleFilter):
         gameState.
         """
         newParticles = []
-        cache = {}
+
+        @lru_cache(maxsize=None)
+        def cachedDistribution(particle, i):
+            self.getPositionDistribution(
+                gameState, oldParticle, index=i, agent=self.ghostAgents[i])
+
         for oldParticle in self.particles:
             newParticle = list(oldParticle)  # A list of ghost positions
-
-            # now loop through and update each entry in newParticle...
-            "*** YOUR CODE HERE ***"
             for i in range(len(oldParticle)):
-                k = (oldParticle, i)
-                if k not in cache.keys():
-                    cache[k] = self.getPositionDistribution(
-                        gameState, oldParticle, index=i, agent=self.ghostAgents[i])
-                newParticle[i] = cache[k].sample()
-            """*** END YOUR CODE HERE ***"""
+                newParticle[i] = cachedDistribution(oldParticle, i).sample()
             newParticles.append(tuple(newParticle))
         self.particles = newParticles
 
