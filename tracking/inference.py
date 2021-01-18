@@ -19,6 +19,7 @@ import game
 
 from util import manhattanDistance
 from functools import lru_cache
+from math import prod
 
 
 class DiscreteDistribution(dict):
@@ -412,8 +413,8 @@ class JointParticleFilter(ParticleFilter):
         """
         ghosts = list(itertools.product(
             self.legalPositions, repeat=self.numGhosts))
-        self.particles = [ghosts[k % len(ghosts)]
-                          for k in range(self.numParticles)]
+        self.particles = [ghosts[k % len(ghosts)] for k in range(self.numParticles)]
+        return self.particles
 
     def addGhostAgent(self, agent):
         """
@@ -445,21 +446,14 @@ class JointParticleFilter(ParticleFilter):
         be reinitialized by calling initializeUniformly. The total method of
         the DiscreteDistribution may be useful.
         """
-        from collections import Counter
 
         belief = DiscreteDistribution()
         for pos in self.particles:
-            w = 1
-            for i in range(self.numGhosts):
-                w *= self.getObservationProb(
-                    observation[i], gameState.getPacmanPosition(), pos[i], self.getJailPosition(i))
-            belief[pos] += w
-        belief.normalize()
-        if sum(belief.values()) == 0:
-            self.initializeUniformly(gameState)
-        else:
-            self.particles = [belief.sample()
-                              for _ in range(self.numParticles)]
+            belief[pos] += prod(map(lambda i: self.getObservationProb(
+                observation[i], gameState.getPacmanPosition(), pos[i], self.getJailPosition(i)), range(self.numGhosts)))
+
+        self.particles = (self.initializeUniformly(gameState) if sum(belief.values()) == 0
+                          else [belief.sample() for _ in range(self.numParticles)])
 
     def elapseTime(self, gameState):
         """
