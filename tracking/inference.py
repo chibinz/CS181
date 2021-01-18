@@ -345,6 +345,8 @@ class ParticleFilter(InferenceModule):
         self.particles = [pos for pos in self.legalPositions for _ in range(
             self.numParticles // len(self.legalPositions))]
 
+        return self.particles
+
     def observeUpdate(self, observation, gameState):
         """
         Update beliefs based on the distance observation and Pacman's position.
@@ -357,23 +359,28 @@ class ParticleFilter(InferenceModule):
         be reinitialized by calling initializeUniformly. The total method of
         the DiscreteDistribution may be useful.
         """
-        belief = self.getBeliefDistribution()
-        for pos in self.allPositions:
-            belief[pos] *= self.getObservationProb(observation, gameState.getPacmanPosition(),
+        belief = DiscreteDistribution()
+        pacman = gameState.getPacmanPosition()
+        jail = self.getJailPosition()
+
+        for pos in self.particles:
+            belief[pos] += self.getObservationProb(observation, gameState.getPacmanPosition(),
                                                    pos, self.getJailPosition())
-        belief.normalize()
-        belief.unifyIfZero()
-        self.particles = [belief.sample() for _ in range(self.numParticles)]
+        self.particles = (self.initializeUniformly if belief.total() == 0
+                          else [belief.sample() for _ in range(self.numParticles)])
 
     def elapseTime(self, gameState):
         """
         Sample each particle's next state based on its current state and the
         gameState.
         """
-        from collections import Counter
 
-        self.particles = [self.getPositionDistribution(gameState, k).sample(
-        ) for k, v in Counter(self.particles).items() for _ in range(v)]
+        @lru_cache
+        def cachedDistribution(pos):
+            return self.getPositionDistribution(gameState, pos)
+
+        self.particles = [cachedDistribution(pos).sample()
+                          for pos in self.particles]
 
     def getBeliefDistribution(self):
         """
@@ -413,7 +420,8 @@ class JointParticleFilter(ParticleFilter):
         """
         ghosts = list(itertools.product(
             self.legalPositions, repeat=self.numGhosts))
-        self.particles = [ghosts[k % len(ghosts)] for k in range(self.numParticles)]
+        self.particles = [ghosts[k % len(ghosts)]
+                          for k in range(self.numParticles)]
         return self.particles
 
     def addGhostAgent(self, agent):
@@ -452,7 +460,7 @@ class JointParticleFilter(ParticleFilter):
             belief[pos] += prod(map(lambda i: self.getObservationProb(
                 observation[i], gameState.getPacmanPosition(), pos[i], self.getJailPosition(i)), range(self.numGhosts)))
 
-        self.particles = (self.initializeUniformly(gameState) if sum(belief.values()) == 0
+        self.particles = (self.initializeUniformly(gameState) if belief.total() == 0
                           else [belief.sample() for _ in range(self.numParticles)])
 
     def elapseTime(self, gameState):
@@ -460,7 +468,7 @@ class JointParticleFilter(ParticleFilter):
         Sample each particle's next state based on its current state and the
         gameState.
         """
-        @lru_cache(maxsize=None)
+        @lru_cache
         def cachedDistribution(particle, i):
             return self.getPositionDistribution(
                 gameState, particle, index=i, agent=self.ghostAgents[i])
