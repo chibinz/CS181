@@ -164,8 +164,6 @@ class InferenceModule:
                 dist[successorPosition] = prob * (1.0 - mult)
         return dist
 
-    import functools
-
     def getPositionDistribution(self, gameState, pos, index=None, agent=None):
         """
         Return a distribution over successor positions of the ghost from the
@@ -296,8 +294,9 @@ class ExactInference(InferenceModule):
         position is known.
         """
         for pos in self.allPositions:
-            self.beliefs[pos] *= self.getObservationProb(observation, gameState.getPacmanPosition(
-            ), pos, self.getJailPosition())
+            self.beliefs[pos] *= self.getObservationProb(
+                observation, gameState.getPacmanPosition(), pos, self.getJailPosition())
+
         self.beliefs.normalize()
 
     def elapseTime(self, gameState):
@@ -342,8 +341,8 @@ class ParticleFilter(InferenceModule):
         distributed across positions in order to ensure a uniform prior. Use
         self.particles for the list of particles.
         """
-        self.particles = [pos for pos in self.legalPositions for _ in range(
-            self.numParticles // len(self.legalPositions))]
+        self.particles = [pos for pos in self.legalPositions
+                          for _ in range(self.numParticles // len(self.legalPositions))]
 
         return self.particles
 
@@ -360,13 +359,12 @@ class ParticleFilter(InferenceModule):
         the DiscreteDistribution may be useful.
         """
         belief = DiscreteDistribution()
-        pacman = gameState.getPacmanPosition()
-        jail = self.getJailPosition()
 
         for pos in self.particles:
-            belief[pos] += self.getObservationProb(observation, gameState.getPacmanPosition(),
-                                                   pos, self.getJailPosition())
-        self.particles = (self.initializeUniformly if belief.total() == 0
+            belief[pos] += self.getObservationProb(
+                observation, gameState.getPacmanPosition(), pos, self.getJailPosition())
+
+        self.particles = (self.initializeUniformly(gameState) if belief.total() == 0
                           else [belief.sample() for _ in range(self.numParticles)])
 
     def elapseTime(self, gameState):
@@ -458,7 +456,8 @@ class JointParticleFilter(ParticleFilter):
         belief = DiscreteDistribution()
         for pos in self.particles:
             belief[pos] += prod(map(lambda i: self.getObservationProb(
-                observation[i], gameState.getPacmanPosition(), pos[i], self.getJailPosition(i)), range(self.numGhosts)))
+                observation[i], gameState.getPacmanPosition(),
+                pos[i], self.getJailPosition(i)), range(self.numGhosts)))
 
         self.particles = (self.initializeUniformly(gameState) if belief.total() == 0
                           else [belief.sample() for _ in range(self.numParticles)])
@@ -514,8 +513,8 @@ class MarginalInference(InferenceModule):
         Return the marginal belief over a particular ghost by summing out the
         others.
         """
-        jointDistribution = jointInference.getBeliefDistribution()
         dist = DiscreteDistribution()
-        for t, prob in jointDistribution.items():
+        for t, prob in jointInference.getBeliefDistribution().items():
             dist[t[self.index - 1]] += prob
+
         return dist
