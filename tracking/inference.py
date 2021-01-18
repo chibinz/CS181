@@ -466,19 +466,13 @@ class JointParticleFilter(ParticleFilter):
         Sample each particle's next state based on its current state and the
         gameState.
         """
-        newParticles = []
-
         @lru_cache(maxsize=None)
         def cachedDistribution(particle, i):
-            self.getPositionDistribution(
-                gameState, oldParticle, index=i, agent=self.ghostAgents[i])
+            return self.getPositionDistribution(
+                gameState, particle, index=i, agent=self.ghostAgents[i])
 
-        for oldParticle in self.particles:
-            newParticle = list(oldParticle)  # A list of ghost positions
-            for i in range(len(oldParticle)):
-                newParticle[i] = cachedDistribution(oldParticle, i).sample()
-            newParticles.append(tuple(newParticle))
-        self.particles = newParticles
+        self.particles = [tuple([cachedDistribution(old, i).sample()
+                                 for i in range(len(old))]) for old in self.particles]
 
 
 # One JointInference module is shared globally across instances of MarginalInference
