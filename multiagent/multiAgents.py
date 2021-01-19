@@ -106,7 +106,7 @@ class MultiAgentSearchAgent(Agent):
         self.evaluationFunction = util.lookup(evalFn, globals())
         self.depth = int(depth)
 
-    def isFinished(self, state, depth):
+    def isEnd(self, state, depth):
         return state.isWin() or state.isLose() or depth == self.depth * state.getNumAgents()
 
     def getAgent(self, state, depth):
@@ -117,6 +117,9 @@ class MinimaxAgent(MultiAgentSearchAgent):
     """
     Your minimax agent (question 1)
     """
+
+    def ghostFunc(self, vals):
+        return min(vals)
 
     def getAction(self, gameState):
         """
@@ -142,23 +145,20 @@ class MinimaxAgent(MultiAgentSearchAgent):
         Returns whether or not the game state is a losing state
         """
 
-        self.recurseStates(gameState, 0)
-        return self.action
+        return self.recurse(gameState, 0)[1]
 
-    def recurseStates(self, state, depth):
-        if self.isFinished(state, depth):
-            self.action = Directions.STOP
-            return self.evaluationFunction(state)
-        else:  # Maximize or minimize depending on depth (whose turn is it)
-            agent = self.getAgent(state, depth)
-            results = [self.recurseStates(state.generateSuccessor(
-                agent, action), depth + 1) for action in state.getLegalActions(agent)]
-            if agent == 0:  # Pacman turn
-                self.action = state.getLegalActions(
-                    agent)[results.index(max(results))]
-                return max(results)
-            else:  # Ghost(s) turn
-                return min(results)
+    def recurse(self, state, depth):
+        if self.isEnd(state, depth):
+            return self.evaluationFunction(state), Directions.STOP
+
+        agent = self.getAgent(state, depth)
+        actions = state.getLegalActions(agent)
+        vals = [self.recurse(state.generateSuccessor(agent, a), depth + 1)[0]
+                for a in actions]
+        val = (max if agent == 0 else self.ghostFunc)(vals)
+        act = actions[vals.index(val)] if agent == 0 else Directions.STOP
+
+        return val, act
 
 
 class AlphaBetaAgent(MultiAgentSearchAgent):
@@ -173,22 +173,21 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
         return self.recurseStates(gameState, 0, float('-inf'), float('inf'))[1]
 
     def recurseStates(self, state, depth, alpha, beta):
-        if self.isFinished(state, depth):
+        if self.isEnd(state, depth):
             return self.evaluationFunction(state), Directions.STOP
-        elif self.getAgent(state, depth) == 0:
-            return self.recurseBeta(state, depth, alpha, beta)
-        else:
-            return self.recurseAlpha(state, depth, alpha, beta)
+
+        return (self.recurseBeta if self.getAgent(state, depth) == 0 else
+                self.recurseAlpha)(state, depth, alpha, beta)
 
     def recurseBeta(self, state, depth, alpha, beta):
         curr = float('-inf')
         agent = self.getAgent(state, depth)
         action = Directions.STOP
         for a in state.getLegalActions(agent):
-            result, _ = self.recurseStates(state.generateSuccessor(
+            val, _ = self.recurseStates(state.generateSuccessor(
                 agent, a), depth+1, alpha, beta)
-            if result > curr:
-                curr = result
+            if val > curr:
+                curr = val
                 action = a
             if curr > beta:  # Exit early, i.e. prune
                 return (curr, action)
@@ -202,9 +201,9 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
         action = Directions.STOP
         for a in state.getLegalActions(agent):
             succ = state.generateSuccessor(agent, a)
-            result, _ = self.recurseStates(succ, depth+1, alpha, beta)
-            if result < curr:
-                curr = result
+            val, _ = self.recurseStates(succ, depth+1, alpha, beta)
+            if val < curr:
+                curr = val
                 action = a
             if curr < alpha:
                 return (curr, action)
@@ -213,65 +212,48 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
         return curr, action
 
 
-class ExpectimaxAgent(MultiAgentSearchAgent):
+class ExpectimaxAgent(MinimaxAgent):
     """
       Your expectimax agent (question 3)
     """
 
-    def getAction(self, gameState):
-        """
-        Returns the expectimax action using self.depth and self.evaluationFunction
+    def ghostFunc(self, vals):
+        return sum(vals) / len(vals)
 
-        All ghosts should be modeled as choosing uniformly at random from their
-        legal moves.
-        """
-        self.recurseStates(gameState, 0)
-        return self.action
-
-    def recurseStates(self, state, depth):
-        if self.isFinished(state, depth):
-            self.action = Directions.STOP
-            return self.evaluationFunction(state)
-        else:  # Maximize or minimize depending on depth (whose turn is it)
-            agent = self.getAgent(state, depth)
-            results = [self.recurseStates(state.generateSuccessor(
-                agent, action), depth + 1) for action in state.getLegalActions(agent)]
-            if agent == 0:  # Pacman turn
-                self.action = state.getLegalActions(
-                    agent)[results.index(max(results))]
-                return max(results)
-            else:  # Ghost(s) turn
-                return sum(results) / len(results)
+    """
+    `getAction` is inherited from MinimaxAgent
+    """
 
 
 def betterEvaluationFunction(currentGameState, init=True):
     """
     Your extreme ghost-hunting, pellet-nabbing, food-gobbling, unstoppable
     evaluation function (question 4).
-
-    - Use randint to break ties when min(foodDists) is same at different states.
-    - `time` - 2 > 0 when ghosts are going to be scared for > 2 second.
-    - Otherwise it may be sensible to run away from ghost
     """
     original = currentGameState.getScore()
     pos = currentGameState.getPacmanPosition()
     foods = currentGameState.getFood()
     ghostStates = currentGameState.getGhostStates()
 
+    """
+    - Use randint to break ties when min(foodDists) is same at different states.
+    - `time` - 2 > 0 when ghosts are going to be scared for > 2 second.
+    - Otherwise it may be sensible to run away from ghost
+    """
     ghostScaredTimesAndDists = [(g.scaredTimer, manhattanDistance(pos, g.getPosition()))
                                 for g in ghostStates]
     foodDists = [manhattanDistance(pos, food) for food in foods.asList()]
 
     def calcGhostScore(tup):
         time, dist = tup
-        return 2 * (time - 2) / (dist / 2 + 0.0001)
+        return 2 * (time - 2) / (dist / 2 + 0.1)
 
-    foodScore = -min(foodDists, default=0)
+    foodScore = min(foodDists, default=0)
     ghostScore = sum(map(calcGhostScore, ghostScaredTimesAndDists))
 
-    score = original + foodScore + ghostScore + random.randint(0, 1)
+    return original - foodScore + ghostScore + random.randint(0, 1)
 
-    return score
+
 
 
 # Abbreviation
