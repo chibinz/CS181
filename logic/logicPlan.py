@@ -19,10 +19,9 @@ Pacman agents (in logicAgents.py).
 
 import util
 import sys
-import logic
-import game
 
 from logic import *
+from itertools import combinations, product
 
 pacman_str = 'P'
 ghost_pos_str = 'G'
@@ -153,10 +152,7 @@ def atMostOne(literals):
     CNF (conjunctive normal form) that represents the logic that at most one of
     the expressions in the list is true.
     """
-    import itertools
-    constraints = [disjoin(~l0, ~l1)
-                   for l0, l1 in itertools.combinations(literals, 2)]
-    return conjoin(constraints)
+    return conjoin([disjoin(~l0, ~l1) for l0, l1 in combinations(literals, 2)])
 
 
 def exactlyOne(literals):
@@ -180,10 +176,12 @@ def extractActionSequence(model, actions):
     >>> print plan
     ['West', 'South', 'North']
     """
-    actionAndTime = [(PropSymbolExpr.parseExpr(key)[0], PropSymbolExpr.parseExpr(
-        key)[1]) for key in model if model[key] and PropSymbolExpr.parseExpr(key)[0] in actions]
-    actionAndTime.sort(key=lambda x: int(x[1]))
-    return list(map(lambda x: x[0], actionAndTime))
+
+    parse = PropSymbolExpr.parseExpr
+    actionAndTime = sorted([parse(key) for key in model if model[key]
+                            and parse(key)[0] in actions], key=lambda x: int(x[1]))
+
+    return [a[0] for a in actionAndTime]
 
 
 def pacmanSuccessorStateAxioms(x, y, t, walls_grid):
@@ -199,42 +197,36 @@ def pacmanSuccessorStateAxioms(x, y, t, walls_grid):
     return to_cnf(PropSymbolExpr(pacman_str, x, y, t) % disjoin(valid))
 
 
-def positionLogicPlan(problem):
+def positionLogicPlan(problem, isFood=False, st=None, gl=lambda t: None):
     """
     Given an instance of a PositionPlanningProblem, return a list of actions that lead to the goal.
     Available actions are game.Directions.{NORTH,SOUTH,EAST,WEST}
     Note that STOP is not an available action.
     """
-    walls = problem.walls
-    width, height = problem.getWidth(), problem.getHeight()
-    start = problem.getStartState()
+    walls, width, height = problem.walls, problem.getWidth(), problem.getHeight()
+    start = st if isFood else problem.getStartState()
     actions = ['South', 'North', 'West', 'East']
-    allPos = [(x, y) for x in range(1, width+1)
-              for y in range(1, height+1)]
+    allPos = list(product(range(1, width+1), range(1, height+1)))
+    validPos = [pos for pos in allPos if not walls[pos[0]][pos[1]]]
 
-    # Initial state
-    constraints = PropSymbolExpr(pacman_str, *start, 0)
-    for x, y in allPos:
-        if (x, y) != start:
-            constraints = conjoin(
-                constraints, ~PropSymbolExpr(pacman_str, x, y, 0))
+    initial = PropSymbolExpr(pacman_str, *start, 0)
+    other = [~PropSymbolExpr(pacman_str, *pos, 0)
+             for pos in allPos if pos != start]
+    constraints = conjoin(initial, *other)
 
     t = 0
-    while True:
-        oneAction = conjoin(
-            [exactlyOne([PropSymbolExpr(action, t) for action in actions])])
-        constraints = conjoin(constraints, oneAction)
-        for x, y in allPos:
-            if not walls[x][y]:
-                constraints = conjoin(
-                    constraints, pacmanSuccessorStateAxioms(x, y, t + 1, walls))
-        goal = PropSymbolExpr(pacman_str, *problem.getGoalState(), t + 1)
+    model = False
+    while not model:
+        oneAction = [exactlyOne([PropSymbolExpr(a, t) for a in actions])]
+        successor = [pacmanSuccessorStateAxioms(x, y, t + 1, walls)
+                     for x, y in validPos]
+        constraints = conjoin(constraints, *oneAction, *successor)
+        goal = gl(t) if isFood else PropSymbolExpr(
+            pacman_str, *problem.getGoalState(), t + 1)
         model = findModel(conjoin(constraints, goal))
-
-        if model:
-            return extractActionSequence(model, actions)
-
         t += 1
+
+    return extractActionSequence(model, actions)
 
 
 def foodLogicPlan(problem):
@@ -244,43 +236,13 @@ def foodLogicPlan(problem):
     Available actions are game.Directions.{NORTH,SOUTH,EAST,WEST}
     Note that STOP is not an available action.
     """
-    walls = problem.walls
-    width, height = problem.getWidth(), problem.getHeight()
-    start = problem.getStartState()[0]
-    foods = problem.getStartState()[1]
-    actions = ['South', 'North', 'West', 'East']
-    allPos = [(x, y) for x in range(1, width+1)
-              for y in range(1, height+1)]
+    start, foods = problem.getStartState()
 
-    # Initial state
-    constraints = PropSymbolExpr(pacman_str, *start, 0)
-    for x, y in allPos:
-        if (x, y) != start:
-            constraints = conjoin(
-                constraints, ~PropSymbolExpr(pacman_str, x, y, 0))
+    def foodConstraints(t):
+        return conjoin([atLeastOne([PropSymbolExpr(pacman_str, *pos, past)
+                                    for past in range(t+1)]) for pos in foods.asList()])
 
-    t = 0
-    while True:
-        oneAction = conjoin(
-            [exactlyOne([PropSymbolExpr(action, t) for action in actions])])
-        constraints = conjoin(constraints, oneAction)
-        for x, y in allPos:
-            if not walls[x][y]:
-                constraints = conjoin(
-                    constraints, pacmanSuccessorStateAxioms(x, y, t + 1, walls))
-
-        # Have been to food dot at least once in the past
-        foodConstraint = []
-        for x, y in foods.asList():
-            foodConstraint.append(atLeastOne([PropSymbolExpr(pacman_str, x, y, past) for past in range(0, t+1)]))
-        goal = conjoin(foodConstraint)
-
-        model = findModel(conjoin(constraints, goal))
-
-        if model:
-            return extractActionSequence(model, actions)
-
-        t += 1
+    return positionLogicPlan(problem, True, start, foodConstraints)
 
 
 # Abbreviations

@@ -258,17 +258,16 @@ def betterEvaluationFunction(currentGameState, init=True):
     foods = currentGameState.getFood()
     ghostStates = currentGameState.getGhostStates()
 
-    ghostScaredTimesAndDists = [
-        (g.scaredTimer, manhattanDistance(pos, g.getPosition())) for g in ghostStates]
+    ghostScaredTimesAndDists = [(g.scaredTimer, manhattanDistance(pos, g.getPosition()))
+                                for g in ghostStates]
     foodDists = [manhattanDistance(pos, food) for food in foods.asList()]
 
     def calcGhostScore(tup):
         time, dist = tup
         return 2 * (time - 2) / (dist / 2 + 0.0001)
 
-    ghostScores = map(calcGhostScore, ghostScaredTimesAndDists)
     foodScore = -min(foodDists, default=0)
-    ghostScore = sum(ghostScores)
+    ghostScore = sum(map(calcGhostScore, ghostScaredTimesAndDists))
 
     score = original + foodScore + ghostScore + random.randint(0, 1)
 
