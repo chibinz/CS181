@@ -18,7 +18,7 @@ Pacman agents (in searchAgents.py).
 """
 
 import util
-from util import Stack, Queue, PriorityQueue, PriorityQueueWithFunction
+from util import Stack, Queue, PriorityQueueWithFunction
 from game import Directions
 
 
@@ -107,19 +107,16 @@ def depthFirstSearch(problem):
     print("Is the start a goal?", problem.isGoalState(problem.getStartState()))
     print("Start's successors:", problem.getSuccessors(problem.getStartState()))
     """
-    "*** YOUR CODE HERE ***"
     return searchTemplate(problem, Stack)
 
 
 def breadthFirstSearch(problem):
     """Search the shallowest nodes in the search tree first."""
-    "*** YOUR CODE HERE ***"
     return searchTemplate(problem, Queue)
 
 
 def uniformCostSearch(problem):
     """Search the node of least total cost first."""
-    "*** YOUR CODE HERE ***"
     def myPriorityQueue(): return PriorityQueueWithFunction(
         lambda x: problem.getCostOfActions(x[1]))
     return searchTemplate(problem, myPriorityQueue)
@@ -135,7 +132,6 @@ def nullHeuristic(state, problem=None):
 
 def aStarSearch(problem, heuristic=nullHeuristic):
     """Search the node that has the lowest combined cost and heuristic first."""
-    "*** YOUR CODE HERE ***"
     def myPriorityQueue(): return PriorityQueueWithFunction(
         lambda x: problem.getCostOfActions(x[1]) + heuristic(x[0], problem))
     return searchTemplate(problem, myPriorityQueue)
