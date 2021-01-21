@@ -1,5 +1,6 @@
 # CS181
 Artificial Intelligence, UC Berkeley's CS188 taught at ShanghaiTech
+![Final Project](uno.png)
 
 ## Final
 [final](https://github.com/huiwy/AlphaUNO-Zero)
